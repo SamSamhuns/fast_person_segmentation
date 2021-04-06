@@ -1,0 +1,56 @@
+{
+  "bilinear_bnoptimized_munet": {
+    "info": "mobile unet mobilenetv2 bilinear backbone, 128x128 15 fps, better borders",
+    "in_width": 128,
+    "in_height": 128,
+    "in_name": "input_1",
+    "out_name": "op/Sigmoid",
+    "h5": "models/bilinear_seg/bilinear_bnoptimized_munet.h5",
+    "pb": "models/bilinear_seg/bilinear_bnoptimized_munet.pb"
+  },
+  "deconv_bnoptimized_munet_e260": {
+    "info": "mobile unet mobilenetv2 transpose backbone retrained to 260 epochs, 128x128 25 fps, best & fastest model",
+    "in_width": 128,
+    "in_height": 128,
+    "in_name": "import/input_1:0",
+    "out_name": "import/op/Sigmoid:0",
+    "h5": "models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5",
+    "pb": "models/transpose_seg/deconv_bnoptimized_munet_e260.pb"
+  },
+  "deconv_bnoptimized_munet_orig": {
+    "info": "mobile unet mobilenetv2 transpose backbone, 128x128 25 fps orig, fast model",
+    "in_width": 128,
+    "in_height": 128,
+    "in_name": "import/input_1:0",
+    "out_name": "import/op/Sigmoid:0",
+    "h5": "models/transpose_seg/deconv_bnoptimized_munet_orig.h5",
+    "pb": "models/transpose_seg/deconv_bnoptimized_munet_orig.pb"
+  },
+  "munet_mnv3_wm05": {
+    "info": "mobile unet mobilenetv3 backbone, 224x224 20 fps, fast model but unstable video output",
+    "in_width": 224,
+    "in_height": 224,
+    "in_name": "input_1",
+    "out_name": "reshape_1/Reshape",
+    "h5": "models/mnv3_seg/munet_mnv3_wm05.h5",
+    "pb": "models/mnv3_seg/munet_mnv3_wm05.pb"
+  },
+  "munet_mnv3_wm10": {
+    "info": "mobile unet mobilenetv3 backbone, 224x224 20 fps, fast model but unstable video output",
+    "in_width": 224,
+    "in_height": 224,
+    "in_name": "input_1",
+    "out_name": "op/Sigmoid",
+    "h5": "models/mnv3_seg/munet_mnv3_wm10.h5",
+    "pb": "models/mnv3_seg/munet_mnv3_wm10.pb"
+  },
+  "prisma_orig_s256": {
+    "info": "PrismaNet backbone, 256x256 10 fps, slow model but higher resolution",
+    "in_width": 256,
+    "in_height": 256,
+    "in_name": "import/input_3:0",
+    "out_name": "import/op/Sigmoid:0",
+    "h5": "models/prisma_seg/prisma-net-15-0.08.hdf5",
+    "pb": "models/prisma_seg/prisma_orig_s256.pb"
+  }
+}
