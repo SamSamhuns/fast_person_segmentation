@@ -187,8 +187,13 @@ model = load_model(
     'models/prisma_seg/prisma-net-15-0.08.hdf5', compile=False)
 
 # Load the caffe model for colour harmonization
-prototxt = 'models/caffe/deploy_512.prototxt'
-weights = 'models/caffe/harmonize_iter_200000_fp16.caffemodel'
+try:
+    prototxt = 'models/caffe/deploy_512.prototxt'
+    weights = 'models/caffe/harmonize_iter_200000_fp16.caffemodel'
+except Exception as e:
+    print(e)
+    print("""Download caffe harmonization model from:
+    https://drive.google.com/file/d/1bWafRdYBupr8eEuxSclIQpF7DaC_2MEY/view?usp=sharing""")
 net = cv2.dnn.readNetFromCaffe(prototxt, weights)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
 
