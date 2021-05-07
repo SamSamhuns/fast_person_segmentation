@@ -15,7 +15,9 @@
     "in_name": "import/input_1:0",
     "out_name": "import/op/Sigmoid:0",
     "h5": "models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5",
-    "pb": "models/transpose_seg/deconv_bnoptimized_munet_e260.pb"
+    "pb": "models/transpose_seg/deconv_bnoptimized_munet_e260.pb",
+    "bin": "python/models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin",
+    "xml": "python/models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml"
   },
   "deconv_bnoptimized_munet_orig": {
     "info": "mobile unet mobilenetv2 transpose backbone, 128x128 25 fps orig, fast model",

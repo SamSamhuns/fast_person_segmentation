@@ -136,3 +136,4 @@ dmypy.json
 
 # mac OS system files
 .DS_Store
+._DS_Store
