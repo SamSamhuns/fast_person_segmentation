@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# create a conda env `server_c` required for train, test, and inference
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   echo "darwin system conda install starting"
@@ -11,6 +11,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   yes | conda install -c conda-forge opencv;
   yes | conda install -c anaconda h5py=2.10.0;
   yes | conda install -c anaconda tensorflow-gpu=1.14.0;
+  yes | pip install openvino==2021.3.0;
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   echo "darwin system conda install starting"
   yes | conda create -n server_c python=3.7
@@ -21,6 +22,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   yes | conda install -c conda-forge keras=2.2.4;
   yes | conda install -c anaconda h5py=2.10.0;
   yes | conda install -c anaconda tensorflow-gpu=1.14.0;
+  yes | pip install openvino==2021.3.0;
 elif [[ "$OSTYPE" == "cygwin" ]]; then
   echo "cygwin system conda install not implmented"
         # POSIX compatibility layer and Linux environment emulation for Windows
