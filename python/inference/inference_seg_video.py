@@ -174,14 +174,6 @@ def harmonize(image, mask):
     return img
 
 
-# Load the model and background image
-# model = load_model(
-#     'models/transpose_seg/deconv_bnoptimized_munet.h5', compile=False)
-
-# testing
-# in_height, in_width = 128, 128
-# model = load_model(
-#     'checkpoints/deconv_bnoptimized_munet-orig-data-260-0.06.hdf5', compile=False)
 in_height, in_width = 256, 256
 model = load_model(
     'models/prisma_seg/prisma-net-15-0.08.hdf5', compile=False)
