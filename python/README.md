@@ -27,6 +27,10 @@ _Note: conda_install.sh will install all the required dependencies_
 -   Download caffe harmonization [model](https://drive.google.com/file/d/1bWafRdYBupr8eEuxSclIQpF7DaC_2MEY/view?usp=sharing)
 -   Download portrait dataset [AISegment](https://datasetsearch.research.google.com/search?query=portrait%20segmentation&docid=O3kWsG%2FOg%2FZspufiAAAAAA%3D%3D) (Optional)
 
+## Pre-trained Weights
+
+Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/1wHmttTd073J3ccug1PfpsAnnmHaiEt_x/view?usp=sharing)
+
 ## Datasets
 
 The base training data consists of **18698 human portrait RGB images of size 128x128**, along with their **masks(ALPHA)**. Here we augment the [**PFCN**](https://1drv.ms/u/s!ApwdOxIIFBH19Ts5EuFd9gVJrKTo) dataset with (handpicked) portrait images from **supervisely** dataset. Additionally, we download **random selfie** images from web and generate their masks using the state-of-the-art **deeplab-xception** semantic segmentation model.
