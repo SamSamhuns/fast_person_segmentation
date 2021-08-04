@@ -3,6 +3,8 @@ import sys
 import time
 import numpy as np
 from keras.models import load_model
+# custom imports
+from utils.inference import load_bgd
 
 
 def image_stats(image):
@@ -154,10 +156,7 @@ def harmonize(image, mask):
     net.setInput(blobmsk, 'mask')
 
     # Predict the output
-    start = time.time()
     pred = net.forward()
-    end = time.time()
-    print('Time: ' + str(end - start))
 
     # Add mean to output
     res = pred[0].transpose((1, 2, 0))
@@ -198,9 +197,12 @@ fps = ""
 # threshold for pixel pred
 p_thres = 0.7
 
-# Convert background to float [0-1]
-bgd = cv2.resize(cv2.imread(sys.argv[1]), (tgt_size, tgt_size))
-bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
+bg_img_path = None
+if len(sys.argv) == 3:
+    bg_img_path = sys.argv[2]
+print(bg_img_path)
+# Load background image, if path is None, use dark background
+bgd = load_bgd(bg_img_path, tgt_size, tgt_size)
 
 # Initialize video capturer
 cap = cv2.VideoCapture(0)

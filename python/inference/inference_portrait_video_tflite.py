@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from time import time
 import tensorflow as tf
 from PIL import Image
 
@@ -34,8 +35,10 @@ size = (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
         int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 cnt = 0
 pred_video = None
+fps = ""
 
 while True:
+    t1 = time()
     # Read the BGR frames
     ret, frame = cap.read()
     image = Image.fromarray(frame)
@@ -74,16 +77,13 @@ while True:
     outputs = cv2.resize(outputs, size)
     _, _, outputs = blend(frame, outputs)
 
-    # Display the output
+    # Display the resulting frame & FPS
+    cv2.putText(outputs, fps, (size[1] - 180, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2, cv2.LINE_AA)
     cv2.imshow('Portrait Video', outputs)
+    fps = f"FPS: {1/(time() - t1):.1f}"
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
-    # Print the frame count
-    cnt += 1
-    if cnt % 100 == 0:
-        print("cnt: ", cnt)
-        cnt = 0
 
 # When everything done, release the capturer
 cap.release()

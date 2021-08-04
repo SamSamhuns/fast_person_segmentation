@@ -21,11 +21,6 @@ def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CP
     # load IECore object
     OpenVinoIE = IECore()
 
-    # load CPU extensions if necessary
-    # if 'CPU' in args.target_device:
-    #     OpenVinoIE.add_extension(
-    #         '/opt/intel/openvino/inference_engine/lib/intel64/libcpu_extension.so', "CPU")
-
     # load openVINO network
     OpenVinoNetwork = OpenVinoIE.read_network(
         model=model_xml_path, weights=model_bin_path)

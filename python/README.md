@@ -80,10 +80,14 @@ $   python train.py # Train the model on data-set
 $   python eval.py checkpoints/<CHECKPOINT_PATH.hdf5> # Evaluate the model on test-set
 $   python export.py checkpoints/<CHECKPOINT_PATH.hdf5> # Export the model for deployment
 $   python test.py <TEST_IMAGE_PATH.jpg> # Test the model on a single image
-$   ./run_inference.sh inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam feed replacing bg with media/img/beach.jpg
-$   ./run_inference.sh inference/inference_tflite.py  # Run the model using tflite interpreter
-$   ./run_inference.sh inference/inference_seg_video.py  media/img/beach.jpg # Apply blending filters on video
-$   ./run_inference.sh inference/inference_portrait_video.py  # Use portrait-net for video segmentation
+$   ./run_inference.sh inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam replacing bg with media/img/beach.jpg
+$   ./run_inference.sh inference/inference_openvino.py                # 35 FPS, Run the model using openvino inference engine
+$   ./run_inference.sh inference/inference_tensorflow_pb.py           # 24 FPS, run model with tensorflow v1 frozen graph inference
+$   ./run_inference.sh inference/inference_nosmoothed_with_slider.py  # 19 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+$   ./run_inference.sh inference/inference_smoothed_with_slider.py    # 19 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+$   ./run_inference.sh inference/inference_tflite.py                  # 11 FPS, Run the model using tflite interpreter
+$   ./run_inference.sh inference/inference_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
+$   ./run_inference.sh inference/inference_seg_video.py               # Apply blending filters on video
 ```
 
 ## Mobile-Unet Architecture
