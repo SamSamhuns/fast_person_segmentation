@@ -1,11 +1,10 @@
 import cv2
 import time
 import numpy as np
-from PIL import Image
 import tensorflow as tf
 
 # custom util import
-from utils.inference import get_parsed_cmd_args
+from utils.inference import get_cmd_argparser
 
 
 def inference_model(vid_path,
@@ -85,8 +84,8 @@ def inference_model(vid_path,
 
 
 def main():
-    args = get_parsed_cmd_args(
-        default_model="models/transpose_seg/deconv_fin_munet.tflite")
+    parser = get_cmd_argparser(default_model="models/transpose_seg/deconv_fin_munet.tflite")
+    args = parser.parse_args()
     inference_model(args.source_vid_path,
                     args.model_path)
 

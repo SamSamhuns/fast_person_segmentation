@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.python.platform import gfile
 
 # custom imports
-from utils.inference import get_parsed_cmd_args, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
 tf.config.optimizer.set_jit(True)
 
 
@@ -130,8 +130,9 @@ def inference_model(vid_path,
 
 
 def main():
-    args = get_parsed_cmd_args(
+    parser = get_cmd_argparser(
         default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.pb")
+    args = parser.parse_args()
     inference_model(args.source_vid_path,
                     args.bg_img_path,
                     args.model_path)

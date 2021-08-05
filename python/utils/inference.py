@@ -6,7 +6,10 @@ import json
 import cv2
 
 
-def get_parsed_cmd_args(default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5"):
+def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5"):
+    """
+    get a argparse.ArgumentParser object, must run parser.parse_args() to parse cmd args
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-v',
                         '--source_vid_path',
@@ -26,8 +29,7 @@ def get_parsed_cmd_args(default_model="models/transpose_seg/deconv_bnoptimized_m
                         required=False,
                         default=default_model,
                         help="Path to inference model (i.e. h5 fmt)")
-    args = parser.parse_args()
-    return args
+    return parser
 
 
 def get_config_dict(model_path, json_config_path):
@@ -44,17 +46,18 @@ def get_config_dict(model_path, json_config_path):
     return config_dict
 
 
-def load_bgd(bg_img_path, bg_w, bg_h):
+def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_proc=True):
     """
     loads & preprocesses bg img
     if bg_img_path is None, return a black image image
     """
     if bg_img_path is None:
-        bgd = np.zeros([bg_h, bg_w, 3], dtype=np.float32)
+        bgd = np.zeros([bg_h, bg_w, 3], dtype=dtype)
     elif isinstance(bg_img_path, str) and osp.isfile(bg_img_path):
         bgd = cv2.resize(cv2.imread(bg_img_path),
-                         (bg_w, bg_h)).astype(np.float32)
-        bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
+                         (bg_w, bg_h)).astype(dtype)
+        if post_proc:
+            bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
     else:
         raise Exception(f"{bg_img_path} not a path to image")
     return bgd

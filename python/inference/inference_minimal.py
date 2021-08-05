@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 
 # custom util import
-from utils.inference import get_parsed_cmd_args, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
 
 
 def inference_model(vid_path,
@@ -68,7 +68,8 @@ def inference_model(vid_path,
 
 
 def main():
-    args = get_parsed_cmd_args()
+    parser = get_cmd_argparser()
+    args = parser.parse_args()
     inference_model(args.source_vid_path,
                     args.bg_img_path,
                     args.model_path)

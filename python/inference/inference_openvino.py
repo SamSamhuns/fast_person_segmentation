@@ -7,7 +7,7 @@ from enum import Enum
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
 # custom imports
-from utils.inference import get_parsed_cmd_args, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
 
 
 class Post_Processing(Enum):
@@ -130,7 +130,8 @@ def inference_model(vid_path,
 
 
 def main():
-    args = get_parsed_cmd_args(default_model=None)
+    parser = get_cmd_argparser(default_model=None)
+    args = parser.parse_args()
     model_xml = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml"
     model_bin = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin"
     inference_model(args.source_vid_path,
