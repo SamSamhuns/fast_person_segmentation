@@ -36,21 +36,16 @@ def inference_model(vid_path,
     overlay = np.zeros((input_shape[0], input_shape[1], 3), np.uint8)
     overlay[:] = (127, 0, 0)
 
-    while True:
-
-        # Read frames
+    ret, frame = cap.read()
+    in_h, in_w = input_shape
+    while ret:
         t1 = time.time()
-        ret, frame = cap.read()
 
         # BGR->RGB, CV2->PIL
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(rgb)
-
-        # Resize image
-        image = image.resize(input_shape, Image.ANTIALIAS)
+        image = cv2.resize(rgb, (in_w, in_h))
 
         # Normalization
-        image = np.asarray(image)
         prepimg = image / 255.0
         prepimg = prepimg[np.newaxis, :, :, :]
 
@@ -62,10 +57,9 @@ def inference_model(vid_path,
 
         # Process the output
         output = np.uint8(outputs[0] > 0.5)
-        res = np.reshape(output, input_shape)
-        mask = Image.fromarray(np.uint8(res), mode="P")
-        mask = np.array(mask.convert("RGB")) * overlay
-        mask = cv2.resize(np.asarray(mask), (width, height),
+        res = np.reshape(output, (in_h, in_w, 1))
+        mask = res * overlay
+        mask = cv2.resize(mask, (width, height),
                           interpolation=cv2.INTER_CUBIC)
         frame = cv2.resize(frame, (width, height),
                            interpolation=cv2.INTER_CUBIC)
@@ -81,6 +75,7 @@ def inference_model(vid_path,
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        ret, frame = cap.read()
         elapsedTime = time.time() - t1
         fps = "(Playback) {:.1f} FPS".format(1 / elapsedTime)
         print("fps = ", str(fps))

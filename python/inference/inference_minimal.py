@@ -29,38 +29,38 @@ def inference_model(vid_path,
 
     cap = cv2.VideoCapture(vid_path)
     msk = None  # mask variable to store previous masked state
-    while True:
+    ret, frame = cap.read()
+    while ret:
+        # Preprocess
+        img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        simg = cv2.resize(img, (input_height, input_width),
+                          interpolation=cv2.INTER_AREA)
+        simg = simg.reshape((1, input_height, input_width, 3)) / 255.0
+
+        # Predict
+        out = model.predict(simg)
+        # Post-process
+        msk = np.float32((out > p_thres)).reshape(
+            (input_height, input_width, 1))
+        msk = cv2.GaussianBlur(msk, ksize=(
+            ksize, ksize), sigmaX=4, sigmaY=0)
+
+        msk = cv2.resize(msk, (bg_h, bg_w)).reshape((bg_h, bg_w, 1))
+        img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+
+        # Alpha blending
+        frame = (img * msk) + (bgd * (1 - msk))
+
+        # resize to final resolution
+        frame = np.uint8(frame * 255.0)
+        frame = cv2.resize(frame, (disp_h, disp_w),
+                           interpolation=cv2.INTER_LINEAR)
+
+        # Display the resulting frame
+        cv2.imshow('image', frame[..., ::-1])
+        if cv2.waitKey(20) & 0xFF == ord('q'):
+            break
         ret, frame = cap.read()
-        if ret:
-            # Preprocess
-            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            simg = cv2.resize(img, (input_height, input_width),
-                              interpolation=cv2.INTER_AREA)
-            simg = simg.reshape((1, input_height, input_width, 3)) / 255.0
-
-            # Predict
-            out = model.predict(simg)
-            # Post-process
-            msk = np.float32((out > p_thres)).reshape(
-                (input_height, input_width, 1))
-            msk = cv2.GaussianBlur(msk, ksize=(
-                ksize, ksize), sigmaX=4, sigmaY=0)
-
-            msk = cv2.resize(msk, (bg_h, bg_w)).reshape((bg_h, bg_w, 1))
-            img = cv2.resize(img, (bg_h, bg_w)) / 255.0
-
-            # Alpha blending
-            frame = (img * msk) + (bgd * (1 - msk))
-
-            # resize to final resolution
-            frame = np.uint8(frame * 255.0)
-            frame = cv2.resize(frame, (disp_h, disp_w),
-                               interpolation=cv2.INTER_LINEAR)
-
-            # Display the resulting frame
-            cv2.imshow('image', frame[..., ::-1])
-            if cv2.waitKey(20) & 0xFF == ord('q'):
-                break
 
     # release the capture
     cap.release()

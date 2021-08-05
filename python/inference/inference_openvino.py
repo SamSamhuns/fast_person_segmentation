@@ -69,9 +69,9 @@ def inference_model(vid_path,
     fps = ""
 
     while True:
+        t1 = time()
         # Capture frame-by-frame
         ret, frame = cap.read()
-        t1 = time()
 
         if ret:
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -123,10 +123,10 @@ def inference_model(vid_path,
             cv2.putText(frame, fps, (disp_h - 180, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow(cv2_disp_name, frame[..., ::-1])
-            fps = f"FPS: {1/(time() - t1):.1f}"
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+            fps = f"FPS: {1/(time() - t1):.1f}"
 
 
 def main():

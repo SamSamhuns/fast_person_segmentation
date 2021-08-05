@@ -215,6 +215,7 @@ cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4, change_bgd)
 
 
 while True:
+    t1 = time.time()
     # Get keyboard input
     key = cv2.waitKey(2) & 0xFF
     if key == ord('c'):
@@ -228,7 +229,6 @@ while True:
 
     # Capture frame-by-frame
     ret, frame = cap.read()
-    t1 = time.time()
 
     if ret:
         # Pre-process
@@ -272,9 +272,9 @@ while True:
         cv2.putText(frame, fps, (1200 - 180, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
         cv2.imshow('portrait segmentation', frame[..., ::-1])
-        fps = f"FPS: {1/(time.time() - t1):.1f}"
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        fps = f"FPS: {1/(time.time() - t1):.1f}"
 
 # When everything done, release the capturer
 cap.release()

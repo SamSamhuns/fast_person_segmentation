@@ -57,8 +57,8 @@ def inference_model(vid_path,
 
     while True:
         # Capture frame-by-frame
-        ret, frame = cap.read()
         t1 = time()
+        ret, frame = cap.read()
 
         # get current positions of trackbars
         p_thres = cv2.getTrackbarPos('threshold', cv2_disp_name) / 20
@@ -101,10 +101,10 @@ def inference_model(vid_path,
             cv2.putText(frame, 'Thres=' + str(p_thres), (disp_h - 180, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow(cv2_disp_name, frame[..., ::-1])
-            fps = f"FPS: {1/(time() - t1):.1f}"
 
-            if cv2.waitKey(20) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+            fps = f"FPS: {1/(time() - t1):.1f}"
 
     print("Final values upon exit")
     print(f"mopen_ksize={mopen_kernel}", f"mopen_iter={mopen_iter}",
