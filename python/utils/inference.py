@@ -46,7 +46,12 @@ def get_config_dict(model_path, json_config_path):
     return config_dict
 
 
-def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_proc=True):
+def _default_post_process(img):
+    """ Convert to RGB space and normlize to [0,1] range """
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB) / 255.0
+
+
+def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_post_process):
     """
     loads & preprocesses bg img
     if bg_img_path is None, return a black image image
@@ -56,8 +61,8 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_proc=True):
     elif isinstance(bg_img_path, str) and osp.isfile(bg_img_path):
         bgd = cv2.resize(cv2.imread(bg_img_path),
                          (bg_w, bg_h)).astype(dtype)
-        if post_proc:
-            bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
+        if post_process is not None:
+            bgd = post_process(bgd)
     else:
         raise Exception(f"{bg_img_path} not a path to image")
     return bgd

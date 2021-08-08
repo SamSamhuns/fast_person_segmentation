@@ -36,7 +36,8 @@ def inference_model(vid_path,
     in_h, in_w = config_dict["in_height"], config_dict["in_width"]
 
     # Load background image, if path is None, use dark background
-    bgd = load_bgd(bg_img_path, bg_w, bg_h)
+    def post_process(img): return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    bgd = load_bgd(bg_img_path, bg_w, bg_h, post_process=post_process)
 
     # load video
     vid_path = 0 if vid_path is None else vid_path
@@ -105,13 +106,12 @@ def inference_model(vid_path,
                                  (bg_h, bg_w)).reshape((bg_h, bg_w, 1)) > default_threshold
 
             # Post-process
-            img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+            img = cv2.resize(img, (bg_h, bg_w))
 
-            # Alpha blending
-            frame = (img * msk) + (bgd * (1 - msk))
+            # Alpha blending: (img * msk) + (bgd * (1 - msk))
+            frame = np.where(msk, img, bgd).astype(np.uint8)
 
             # resize to final resolution
-            frame = np.uint8(frame * 255.0)
             frame = cv2.resize(frame, (disp_h, disp_w),
                                interpolation=cv2.INTER_LINEAR)
 
