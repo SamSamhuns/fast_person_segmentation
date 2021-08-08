@@ -28,7 +28,7 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
                         type=str,
                         required=False,
                         default=default_model,
-                        help="Path to inference model (i.e. h5 fmt)")
+                        help="Path to inference model (i.e. h5/tflite/pb fmt)")
     return parser
 
 

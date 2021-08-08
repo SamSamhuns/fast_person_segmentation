@@ -22,6 +22,7 @@ def inference_model(vid_path,
     # Width and height
     width = 1200
     height = 720
+    def_threshold = 0.63
 
     # Frame rate
     fps = ""
@@ -54,13 +55,11 @@ def inference_model(vid_path,
         outputs = interpreter.get_tensor(output_details[0]['index'])
 
         # Process the output
-        output = np.uint8(outputs[0] > 0.5)
+        output = np.uint8(outputs[0] > def_threshold)
         res = np.reshape(output, (in_h, in_w, 1))
         mask = res * overlay
-        mask = cv2.resize(mask, (width, height),
-                          interpolation=cv2.INTER_CUBIC)
-        frame = cv2.resize(frame, (width, height),
-                           interpolation=cv2.INTER_CUBIC)
+        mask = cv2.resize(mask, (width, height))
+        frame = cv2.resize(frame, (width, height))
         mask = cv2.cvtColor(mask, cv2.COLOR_RGB2BGR)
 
         # Overlay the mask

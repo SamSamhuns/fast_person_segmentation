@@ -55,30 +55,33 @@ print("x_train shape=", x_train.shape, "y_train_shape", y_train.shape)
 # Total number of images
 num_images = x_train.shape[0]
 
-# Preprocessing function (runtime)
 
-
+# Preprocessing functions (runtime)
 def calc_mean_std(img_arr):
     """img_arr must have shape [b_size, width, height, channel]
     """
-    nimages, mean, std = 0, 0., 0.
+    nimages, mean, std = img_arr.shape[0], 0., 0.
     # Rearrange batch to be the shape of [B, C, W * H]
-    img_arr = img_arr.reshape(img_arr.shape[0], img_arr.shape[-1], -1)
+    img_arr = img_arr.reshape(nimages, img_arr.shape[-1], -1)
     # Compute mean and std here
-    mean = img_arr.mean(2).sum(0) / img_arr.shape[0]
-    std = img_arr.std(2).sum(0) / img_arr.shape[0]
+    mean = img_arr.mean(2).sum(0) / nimages
+    std = img_arr.std(2).sum(0) / nimages
 
     return mean / 255, std / 255
 
 
-def normalize_batch(imgs, mean=[0.50693673, 0.47721124, 0.44640532], std=[0.28926975, 0.27801928, 0.28596011]):
+def normalize_batch(imgs,
+                    mean=[0.50693673, 0.47721124, 0.44640532],
+                    std=[0.28926975, 0.27801928, 0.28596011]):
     if imgs.shape[-1] > 1:
         return (imgs - np.array(mean)) / np.array(std)
     else:
         return imgs.round()
 
 
-def denormalize_batch(imgs, should_clip=True, mean=[0.50693673, 0.47721124, 0.44640532], std=[0.28926975, 0.27801928, 0.28596011]):
+def denormalize_batch(imgs, should_clip=True,
+                      mean=[0.50693673, 0.47721124, 0.44640532],
+                      std=[0.28926975, 0.27801928, 0.28596011]):
     imgs = (imgs * np.array(mean)
             ) + np.array(std)
 
@@ -145,8 +148,10 @@ train_generator = zip(train_image_generator, train_mask_generator)
 val_generator = zip(val_image_generator, val_mask_generator)
 
 
-# Convolution block with Transpose Convolution
 def deconv_block(tensor, nfilters, size=3, padding='same', kernel_initializer='he_normal'):
+    """
+    Convolution block with Transpose Convolution
+    """
     y = Conv2DTranspose(filters=nfilters, kernel_size=size, strides=2,
                         padding=padding, kernel_initializer=kernel_initializer)(tensor)
     y = BatchNormalization()(y)
@@ -155,10 +160,11 @@ def deconv_block(tensor, nfilters, size=3, padding='same', kernel_initializer='h
 
     return y
 
-# Convolution block with Upsampling+Conv2D
-
 
 def deconv_block_rez(tensor, nfilters, size=3, padding='same', kernel_initializer='he_normal'):
+    """
+    Convolution block with Upsampling+Conv2D
+    """
     y = UpSampling2D(size=(2, 2), interpolation='bilinear')(tensor)
     y = Conv2D(filters=nfilters, kernel_size=(size, size),
                padding='same', kernel_initializer=kernel_initializer)(y)
@@ -168,11 +174,9 @@ def deconv_block_rez(tensor, nfilters, size=3, padding='same', kernel_initialize
 
     return y
 
-# Model architecture
-
 
 def get_mobile_unet(finetune=False, pretrained=False):
-
+    # Model architecture
     # Load pretrained model (if any)
     if (pretrained):
         model = load_model(PRETRAINED)
