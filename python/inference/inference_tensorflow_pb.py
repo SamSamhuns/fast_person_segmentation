@@ -62,71 +62,68 @@ def inference_model(vid_path,
     # print(graph_nodes)
 
     with tf.compat.v1.Session() as sess:
-        try:
-            prob_tensor = sess.graph.get_tensor_by_name(output_layer)
-            cv2_disp_name = post_processing.name
+        prob_tensor = sess.graph.get_tensor_by_name(output_layer)
+        cv2_disp_name = post_processing.name
 
-            cap = cv2.VideoCapture(vid_path)
-            fps = ""
+        cap = cv2.VideoCapture(vid_path)
+        ret, frame = cap.read()
+        fps = ""
+
+        while ret:
+            # Capture frame-by-frame
+            t1 = time()
+            img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            simg = cv2.resize(img, (in_h, in_w),
+                              interpolation=cv2.INTER_AREA) / 255.0
+            # Predict
+            out = sess.run(prob_tensor, {input_node: [simg]})
+
+            """ MORPH_OPEN SMOOTHING """
+            if post_processing == Post_Processing.MORPH_OPEN:
+                msk = np.float32(out).reshape((in_h, in_w, 1))
+                msk = cv2.resize(msk, (bg_h, bg_w),
+                                 interpolation=cv2.INTER_LINEAR).reshape((bg_h, bg_w, 1))
+
+                # default kernel size (10, 10) and iterations =10
+                msk = cv2.morphologyEx(msk,
+                                       cv2.MORPH_OPEN,
+                                       ksize=(default_mopen_ksize,
+                                              default_mopen_ksize),
+                                       iterations=default_mopen_iter).reshape(
+                    (bg_h, bg_w, 1)) > default_threshold
+
+            """ GAUSSIAN SMOOTHING """
+            if post_processing == Post_Processing.GAUSSIAN:
+                msk = np.float32(out).reshape((in_h, in_w, 1))
+                msk = cv2.GaussianBlur(msk,
+                                       ksize=(default_gauss_ksize,
+                                              default_gauss_ksize),
+                                       sigmaX=4,
+                                       sigmaY=0)
+
+                msk = cv2.resize(msk,
+                                 (bg_h, bg_w)).reshape((bg_h, bg_w, 1)) > default_threshold
+
+            # Post-process
+            img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+
+            # Alpha blending
+            frame = (img * msk) + (bgd * (1 - msk))
+
+            # resize to final resolution
+            frame = np.uint8(frame * 255.0)
+            frame = cv2.resize(frame, (disp_h, disp_w),
+                               interpolation=cv2.INTER_LINEAR)
+
+            # Display the resulting frame & FPS
+            cv2.putText(frame, fps, (disp_h - 180, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+            cv2.imshow(cv2_disp_name, frame[..., ::-1])
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
             ret, frame = cap.read()
-
-            while ret:
-                # Capture frame-by-frame
-                t1 = time()
-                img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                simg = cv2.resize(img, (in_h, in_w),
-                                  interpolation=cv2.INTER_AREA) / 255.0
-                # Predict
-                out = sess.run(prob_tensor, {input_node: [simg]})
-
-                """ MORPH_OPEN SMOOTHING """
-                if post_processing == Post_Processing.MORPH_OPEN:
-                    msk = np.float32(out).reshape((in_h, in_w, 1))
-                    msk = cv2.resize(msk, (bg_h, bg_w),
-                                     interpolation=cv2.INTER_LINEAR).reshape((bg_h, bg_w, 1))
-
-                    # default kernel size (10, 10) and iterations =10
-                    msk = cv2.morphologyEx(msk,
-                                           cv2.MORPH_OPEN,
-                                           ksize=(default_mopen_ksize,
-                                                  default_mopen_ksize),
-                                           iterations=default_mopen_iter).reshape(
-                        (bg_h, bg_w, 1)) > default_threshold
-
-                """ GAUSSIAN SMOOTHING """
-                if post_processing == Post_Processing.GAUSSIAN:
-                    msk = np.float32(out).reshape((in_h, in_w, 1))
-                    msk = cv2.GaussianBlur(msk,
-                                           ksize=(default_gauss_ksize,
-                                                  default_gauss_ksize),
-                                           sigmaX=4,
-                                           sigmaY=0)
-
-                    msk = cv2.resize(msk,
-                                     (bg_h, bg_w)).reshape((bg_h, bg_w, 1)) > default_threshold
-
-                # Post-process
-                img = cv2.resize(img, (bg_h, bg_w)) / 255.0
-
-                # Alpha blending
-                frame = (img * msk) + (bgd * (1 - msk))
-
-                # resize to final resolution
-                frame = np.uint8(frame * 255.0)
-                frame = cv2.resize(frame, (disp_h, disp_w),
-                                   interpolation=cv2.INTER_LINEAR)
-
-                # Display the resulting frame & FPS
-                cv2.putText(frame, fps, (disp_h - 180, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-                cv2.imshow(cv2_disp_name, frame[..., ::-1])
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                ret, frame = cap.read()
-                fps = f"FPS: {1/(time() - t1):.1f}"
-        except Exception as e:
-            print(e)
+            fps = f"FPS: {1/(time() - t1):.1f}"
 
 
 def main():

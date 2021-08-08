@@ -1,9 +1,9 @@
-import cv2
 import sys
+import cv2
 import time
 import numpy as np
+from functools import partial
 from keras.models import load_model
-# custom imports
 from utils.inference import load_bgd
 
 
@@ -34,28 +34,28 @@ def color_transfer(source, target):
     (lMeanTar, lStdTar, aMeanTar, aStdTar, bMeanTar, bStdTar) = image_stats(target)
 
     # Subtract the means from the target image
-    (l, a, b) = cv2.split(target)
-    l -= lMeanTar
+    (lum, a, b) = cv2.split(target)
+    lum -= lMeanTar
     a -= aMeanTar
     b -= bMeanTar
 
     # Scale by the standard deviations
-    l = (lStdTar / lStdSrc) * l
+    lum = (lStdTar / lStdSrc) * lum
     a = (aStdTar / aStdSrc) * a
     b = (bStdTar / bStdSrc) * b
 
     # Add in the source mean
-    l += lMeanSrc
+    lum += lMeanSrc
     a += aMeanSrc
     b += bMeanSrc
 
     # Clip the pixel intensities to [0, 255]
-    l = np.clip(l, 0, 255)
+    lum = np.clip(lum, 0, 255)
     a = np.clip(a, 0, 255)
     b = np.clip(b, 0, 255)
 
     # Merge the channels together and convert back to the RGB format
-    transfer = cv2.merge([l, a, b])
+    transfer = cv2.merge([lum, a, b])
     transfer = cv2.cvtColor(transfer.astype("uint8"), cv2.COLOR_LAB2RGB)
 
     # Convert image to float (0-1)
@@ -72,7 +72,7 @@ def smoothstep(edge0, edge1, x):
     return x * x * (3 - 2 * x)
 
 
-def seamlessclone(source, mask):
+def seamlessclone(source, mask, tgt_size):
 
     # Convert images to UINT8 (0-255)
     src = np.uint8(source * 255.0)
@@ -117,7 +117,7 @@ def seamlessclone(source, mask):
     return clone
 
 
-def change_bgd(x):
+def change_bgd(x, tgt_size):
     # Select background image
     global bgd
     if x == 0:
@@ -137,7 +137,7 @@ def change_bgd(x):
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
 
 
-def harmonize(image, mask):
+def harmonize(net, image, mask, tgt_size):
 
     # Convert image to BGR format
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -173,64 +173,63 @@ def harmonize(image, mask):
     return img
 
 
-in_height, in_width = 256, 256
-model = load_model(
-    'models/prisma_seg/prisma-net-15-0.08.hdf5', compile=False)
+def main():
+    in_height, in_width = 256, 256
+    model = load_model(
+        'models/prisma_seg/prisma-net-15-0.08.hdf5', compile=False)
 
-# Load the caffe model for colour harmonization
-try:
-    prototxt = 'models/caffe/deploy_512.prototxt'
-    weights = 'models/caffe/harmonize_iter_200000_fp16.caffemodel'
-except Exception as e:
-    print(e)
-    print("""Download caffe harmonization model from:
-    https://drive.google.com/file/d/1bWafRdYBupr8eEuxSclIQpF7DaC_2MEY/view?usp=sharing""")
-net = cv2.dnn.readNetFromCaffe(prototxt, weights)
-net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
+    # Load the caffe model for colour harmonization
+    try:
+        prototxt = 'models/caffe/deploy_512.prototxt'
+        weights = 'models/caffe/harmonize_iter_200000_fp16.caffemodel'
+    except Exception as e:
+        print(e)
+        print("""Download caffe harmonization model from:
+        https://drive.google.com/file/d/1bWafRdYBupr8eEuxSclIQpF7DaC_2MEY/view?usp=sharing""")
+    net = cv2.dnn.readNetFromCaffe(prototxt, weights)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL_FP16)
 
-# Target size
-tgt_size = 300
+    # Target size
+    tgt_size = 300
 
-# fps var to store FPS print
-fps = ""
+    # fps var to store FPS print
+    fps = ""
 
-# threshold for pixel pred
-p_thres = 0.7
+    # filter var
+    filter = None
 
-bg_img_path = None
-if len(sys.argv) == 3:
-    bg_img_path = sys.argv[2]
-print(bg_img_path)
-# Load background image, if path is None, use dark background
-bgd = load_bgd(bg_img_path, tgt_size, tgt_size)
+    # threshold for pixel pred
+    p_thres = 0.7
+    bg_img_path = None
+    if len(sys.argv) == 3:
+        bg_img_path = sys.argv[2]
 
-# Initialize video capturer
-cap = cv2.VideoCapture(0)
+    # Load background image, if path is None, use dark background
+    bgd = load_bgd(bg_img_path, tgt_size, tgt_size)
 
-# Create a named window
-cv2.namedWindow('portrait segmentation')
+    # Initialize video capturer
+    cap = cv2.VideoCapture(0)
 
-# Create trackbars for background selection
-cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4, change_bgd)
+    # Create a named window
+    cv2.namedWindow('portrait segmentation')
 
+    # Create trackbars for background selection
+    cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4, partial(change_bgd, tgt_size=tgt_size))
 
-while True:
-    t1 = time.time()
-    # Get keyboard input
-    key = cv2.waitKey(2) & 0xFF
-    if key == ord('c'):
-        filter = 'color_transfer'
-    elif key == ord('s'):
-        filter = 'seamless_clone'
-    elif key == ord('m'):
-        filter = 'smooth_step'
-    elif key == ord('h'):
-        filter = 'colour_harmonize'
-
-    # Capture frame-by-frame
     ret, frame = cap.read()
+    while ret:
+        t1 = time.time()
+        # Get keyboard input
+        key = cv2.waitKey(2) & 0xFF
+        if key == ord('c'):
+            filter = 'color_transfer'
+        elif key == ord('s'):
+            filter = 'seamless_clone'
+        elif key == ord('m'):
+            filter = 'smooth_step'
+        elif key == ord('h'):
+            filter = 'colour_harmonize'
 
-    if ret:
         # Pre-process
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         simg = cv2.resize(img, (in_height, in_width),
@@ -247,15 +246,12 @@ while True:
         msk = cv2.resize(msk, (tgt_size, tgt_size)).reshape(
             (tgt_size, tgt_size, 1))
 
-        # Colour transfer
         if filter == 'color_transfer':
             img = color_transfer(bgd, img)
-        # Smooth step
         elif filter == 'smooth_step':
             msk = smoothstep(0.3, 0.5, msk)
-        # Seamless clone
         elif filter == 'seamless_clone':
-            frame = seamlessclone(img, orimsk)
+            frame = seamlessclone(img, orimsk, tgt_size)
 
         # Alpha blending
         if filter != 'seamless_clone':
@@ -264,7 +260,7 @@ while True:
             mask = np.uint8(msk * 255.0)
 
         if filter == 'colour_harmonize':
-            frame = harmonize(frame, mask)
+            frame = harmonize(net, frame, mask, tgt_size)
 
         # Display the resulting frame
         frame = cv2.resize(frame, (1200, 720), interpolation=cv2.INTER_LINEAR)
@@ -274,10 +270,12 @@ while True:
         cv2.imshow('portrait segmentation', frame[..., ::-1])
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        ret, frame = cap.read()
         fps = f"FPS: {1/(time.time() - t1):.1f}"
 
-# When everything done, release the capturer
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
 
-# Sample run: python seg_video.py media/img/sunset.jpg
+
+if __name__ == "__main__":
+    main()

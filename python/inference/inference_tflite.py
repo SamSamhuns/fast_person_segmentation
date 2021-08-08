@@ -27,7 +27,6 @@ def inference_model(vid_path,
     fps = ""
     elapsedTime = 0
 
-    # Video capturer
     cap = cv2.VideoCapture(vid_path)
     cv2.namedWindow('FPS', cv2.WINDOW_AUTOSIZE)
 

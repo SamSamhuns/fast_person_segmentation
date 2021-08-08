@@ -62,7 +62,6 @@ def inference_model(vid_path,
             break
         ret, frame = cap.read()
 
-    # release the capture
     cap.release()
     cv2.destroyAllWindows()
 
