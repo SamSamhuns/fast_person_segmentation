@@ -17,7 +17,7 @@ def freeze_graph(graph, session, output, save_dir='.', save_pb_name='frozen_mode
             session, graphdef_inf, output)
 
         # To add an init operation to the model
-        i = tf.initializers.global_variables()
+        init_op = tf.initializers.global_variables()
         graph_io.write_graph(graphdef_frozen, save_dir,
                              save_pb_name, as_text=save_pb_as_text)
         return graphdef_frozen
@@ -34,11 +34,11 @@ def save_pb(model_path, save_pb_dir, save_pb_name):
     print(INPUT_NODE, OUTPUT_NODE)
 
     os.makedirs(save_pb_dir, exist_ok=True)
-    frozen_graph = freeze_graph(session.graph,
-                                session,
-                                [out.op.name for out in model.outputs],
-                                save_dir=save_pb_dir,
-                                save_pb_name=save_pb_name)
+    freeze_graph(session.graph,
+                 session,
+                 [out.op.name for out in model.outputs],
+                 save_dir=save_pb_dir,
+                 save_pb_name=save_pb_name)
 
 
 def main(model_path, save_pb_dir, save_pb_name):
