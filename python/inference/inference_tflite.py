@@ -15,6 +15,7 @@ def inference_model(vid_path,
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     input_shape = input_details[0]['shape'][1:3]
+    input_node, output_node = input_details[0]['index'], output_details[0]['index']
 
     # load video
     vid_path = 0 if vid_path is None else vid_path
@@ -49,10 +50,9 @@ def inference_model(vid_path,
         prepimg = prepimg[np.newaxis, :, :, :]
 
         # Segmentation
-        interpreter.set_tensor(
-            input_details[0]['index'], np.array(prepimg, dtype=np.float32))
+        interpreter.set_tensor(input_node, np.array(prepimg, dtype=np.float32))
         interpreter.invoke()
-        outputs = interpreter.get_tensor(output_details[0]['index'])
+        outputs = interpreter.get_tensor(output_node)
 
         # Process the output
         output = np.uint8(outputs[0] > def_threshold)
