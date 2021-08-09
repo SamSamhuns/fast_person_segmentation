@@ -4,8 +4,12 @@ import tensorflow as tf
 
 
 def save_tflite(h5_model_path, tflite_save_path, quant_fmt=tf.float16):
-    converter = tf.lite.TFLiteConverter.from_keras_model_file(h5_model_path)
-    converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_LATENCY]
+    model = tf.keras.models.load_model(h5_model_path)
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+    # does float16 quantization for speedup
+    converter.target_spec.supported_types = [tf.float16]
     tflite_quant_model = converter.convert()
 
     # save converted quantization model to tflite format
