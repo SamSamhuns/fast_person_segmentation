@@ -1,6 +1,6 @@
 #!/bin/bash
 eval "$(conda shell.bash hook)"
-conda activate server_c      # replace with the right conda env
+conda activate fastseg       # replace with the right conda env
 
 export PYTHONPATH=${PYTHONPATH}:./
 export PYTHONPATH=${PYTHONPATH}:./utils/

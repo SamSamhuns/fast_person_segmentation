@@ -3,7 +3,7 @@
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   echo "darwin system conda install starting"
-  yes | conda create -n server_c python=3.7
+  yes | conda create -n fastseg python=3.7
   eval "$(conda shell.bash hook)"
   conda activate server_c
   yes | conda install -c conda-forge tensorflow=1.14.0;
@@ -14,7 +14,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   yes | pip install openvino==2021.3.0;
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   echo "darwin system conda install starting"
-  yes | conda create -n server_c python=3.7
+  yes | conda create -n fastseg python=3.7
   eval "$(conda shell.bash hook)"
   conda activate server_c
   yes | conda install -c conda-forge opencv=3.4.2;
