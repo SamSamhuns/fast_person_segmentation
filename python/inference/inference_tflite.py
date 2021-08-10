@@ -41,7 +41,7 @@ def inference_model(vid_path,
     while ret:
         t1 = time.time()
 
-        # BGR->RGB, CV2->PIL
+        # BGR->RGB
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = cv2.resize(rgb, (in_w, in_h))
 
@@ -75,7 +75,6 @@ def inference_model(vid_path,
         ret, frame = cap.read()
         elapsedTime = time.time() - t1
         fps = "(Playback) {:.1f} FPS".format(1 / elapsedTime)
-        print("fps = ", str(fps))
 
     cap.release()
     cv2.destroyAllWindows()
