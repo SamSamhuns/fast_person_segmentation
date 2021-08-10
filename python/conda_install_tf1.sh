@@ -12,6 +12,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   yes | conda install -c anaconda h5py=2.10.0;
   yes | conda install -c anaconda tensorflow-gpu=1.14.0;
   yes | pip install openvino==2021.3.0;
+  yes | pip install tensorflow_model_optimization==0.6.0
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   echo "darwin system conda install starting"
   yes | conda create -n fastseg python=3.7
@@ -22,6 +23,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   yes | conda install -c conda-forge keras=2.2.4;
   yes | conda install -c anaconda h5py=2.10.0;
   yes | pip install openvino==2021.3.0;
+  yes | pip install tensorflow_model_optimization==0.6.0
 elif [[ "$OSTYPE" == "cygwin" ]]; then
   echo "cygwin system conda install not implmented"
         # POSIX compatibility layer and Linux environment emulation for Windows

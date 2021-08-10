@@ -10,6 +10,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   yes | pip install openvino==2021.3.0
   yes | pip install opencv-python==4.5.3.56
   yes | pip install scipy==1.7.1
+  yes | pip install tensorflow_model_optimization==0.6.0
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   echo "darwin system conda install starting (Only avai in CPU)"
   yes | conda create -n fastseg python=3.7
@@ -19,6 +20,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
   yes | pip install openvino==2021.3.0
   yes | pip install opencv-python==4.5.3.56
   yes | pip install scipy==1.7.1
+  yes | pip install tensorflow_model_optimization==0.6.0
 elif [[ "$OSTYPE" == "cygwin" ]]; then
   echo "cygwin system conda install not implemented"
         # POSIX compatibility layer and Linux environment emulation for Windows
