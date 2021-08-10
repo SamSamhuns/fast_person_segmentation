@@ -1,6 +1,7 @@
 from functools import partial
 
 import numpy as np
+import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import custom_object_scope
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -18,11 +19,11 @@ FINETUNE = False
 
 OPTIMIZER = Adam
 OPTIM_PARAMS = {"learning_rate": 1e-3}  # passed as dict to TRAIN_OPTIMIZER
-EPOCHS = 300
+EPOCHS = 1
 BATCH_SIZE = 32
 TRAIN_FRACTION = 0.8
 VAL_FRACTION = 1 - TRAIN_FRACTION
-Q_AWARE_TRAIN = False     # quantization aware train mode
+Q_AWARE_TRAIN = True     # quantization aware train mode
 
 CHECKPOINT_FMT = "checkpoints/deconv_bnoptimized_munet-{epoch:02d}-{val_loss:.2f}.hdf5"
 LOG_PATH = './logs'
@@ -116,7 +117,7 @@ model.fit_generator(
     callbacks=callbacks_list)
 
 if Q_AWARE_TRAIN:
-    from modules.mobileunet_mobilenet_v2 import NoOpQuantizeConfig, tfmot
+    from modules.mobileunet_mobilenet_v2.munet_mnetv2 import NoOpQuantizeConfig, tfmot
     with custom_object_scope({'NoOpQuantizeConfig': NoOpQuantizeConfig}):
         q_aware_model = tfmot.quantization.keras.quantize_model(model)
 
@@ -129,10 +130,18 @@ if Q_AWARE_TRAIN:
         # better to use a subset of the original training data for fitting here
         q_aware_model.fit_generator(
             train_generator,
-            epochs=200,
+            epochs=30,
             steps_per_epoch=num_train / batch_sz,
             validation_data=val_generator,
             validation_steps=num_val / batch_sz,
             use_multiprocessing=True,
             workers=2,
             callbacks=callbacks_list)
+
+        converter = tf.lite.TFLiteConverter.from_keras_model(q_aware_model)
+        converter.optimizations = [tf.lite.Optimize.DEFAULT]
+
+        quantized_tflite_model = converter.convert()
+        # save converted quantization model to tflite format
+        with open("quantized.tflite", "wb") as tf_ptr:
+            tf_ptr.write(quantized_tflite_model)
