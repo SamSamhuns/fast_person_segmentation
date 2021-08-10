@@ -1,8 +1,7 @@
-from imageio import imsave
-from PIL import Image
 import numpy as np
 import argparse
 import random
+import cv2
 import os
 
 
@@ -50,14 +49,14 @@ def resize():
             # Ensure masks are in png format
             png_msk = item.rsplit('.', 1)[0] + '.png'
 
-            img = Image.open(img_path + item).convert('RGB')
-            msk = Image.open(msk_path + png_msk).convert('RGB')
-            bgd = Image.open(bgd_path + random.choice(dirs_bgd)).convert('RGB')
+            img = cv2.cvtColor(cv2.imread(img_path + item), cv2.COLOR_BGR2RGB)
+            msk = cv2.cvtColor(cv2.imread(msk_path + png_msk), cv2.COLOR_BGR2RGB)
+            bgd = cv2.cvtColor(cv2.imread(bgd_path + random.choice(dirs_bgd)), cv2.COLOR_BGR2RGB)
 
             # Resize foreground, mask and background
-            img = img.resize((x, y), Image.ANTIALIAS)
-            msk = msk.resize((x, y), Image.NEAREST)
-            bgd = bgd.resize((x, y), Image.ANTIALIAS)
+            img = cv2.resize(img, (x, y))
+            msk = cv2.resize(msk, (x, y), cv2.INTER_NEAREST)
+            bgd = cv2.resize(bgd, (x, y))
 
             # Perform alpha blending with new background
             img = np.array(img) / 255.0
@@ -67,8 +66,8 @@ def resize():
             synimg = bgd * (1.0 - msk) + img * msk
 
             # Save the new images and masks
-            imsave(syn_img + "syn_" + item, synimg)
-            imsave(syn_msk + "syn_" + png_msk, np.squeeze(msk))
+            cv2.imwrite(syn_img + "syn_" + item, synimg)
+            cv2.imwrite(syn_msk + "syn_" + png_msk, np.squeeze(msk))
 
 
 if __name__ == "__main__":

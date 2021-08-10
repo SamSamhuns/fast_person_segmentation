@@ -1,6 +1,5 @@
-
-from PIL import Image
 import numpy as np
+import cv2
 import os
 
 '''
@@ -23,9 +22,8 @@ x_train = []
 def load_image():
     for item in img_dirs:
         if os.path.isfile(img_path + item):
-            im = Image.open(img_path + item).convert("RGB")
-            im = im.resize(final_img_dimen)
-            im = np.array(im)
+            im = cv2.cvtColor(cv2.imread(img_path + item), cv2.COLOR_BGR2RGB)
+            im = cv2.resize(im, final_img_dimen)
             im = im.astype('uint8')
             x_train.append(im)
 
@@ -56,9 +54,8 @@ y_train = []
 def load_mask():
     for item in msk_dirs:
         if os.path.isfile(msk_path + item):
-            im = Image.open(msk_path + item).convert("RGB")
-            im = im.resize(final_img_dimen)
-            im = np.array(im)
+            im = cv2.cvtColor(cv2.imread(msk_path + item), cv2.COLOR_BGR2RGB)
+            im = cv2.resize(im, final_img_dimen)
             im = im[..., 0].astype('uint8')
             # removing non-binary values introduced after resizing
             im = np.where(im < 250, 0, 255)
