@@ -1,9 +1,40 @@
 # utils for model inference
+from threading import Thread
+from time import sleep
 import os.path as osp
 import numpy as np
 import argparse
 import json
 import cv2
+
+
+class VideoStreamMultiThreadWidget(object):
+    def __init__(self, src=0):
+        print(f"INFO: Setting up multi-threading video IO from src {src}")
+        self.capture = cv2.VideoCapture(src)
+        # start a thread to read frames from the video stream
+        self.thread = Thread(target=self.update, args=())
+        self.thread.daemon = True
+        self.thread.start()
+        self.frame = None
+
+    def update(self):
+        # read the next frame from the stream in a different thread
+        while True:
+            if self.capture.isOpened():
+                self.status, self.frame = self.capture.read()
+            sleep(.01)
+
+    def show_frame(self):
+        cv2.imshow('frame', self.frame)
+        key = cv2.waitKey(1)
+        if key == ord('q'):
+            self.capture.release()
+            cv2.destroyAllWindows()
+            exit(1)
+
+    def read(self):
+        return self.capture.isOpened(), self.frame
 
 
 def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5"):
@@ -29,6 +60,11 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
                         required=False,
                         default=default_model,
                         help="Path to inference model (i.e. h5/tflite/pb fmt)")
+    parser.add_argument('-mt',
+                        '--use_multi_thread',
+                        action="store_true",
+                        required=False,
+                        help="Flag to use multi_thread for opencv video io. Default is to use single thread")
     return parser
 
 
