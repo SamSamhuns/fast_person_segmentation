@@ -7,7 +7,8 @@ from enum import Enum
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
 # custom imports
-from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict
+from utils.inference import load_bgd, VideoStreamMultiThreadWidget
 
 
 class Post_Processing(Enum):
@@ -36,6 +37,7 @@ def inference_model(vid_path,
                     bg_img_path,
                     xml_model_path,
                     bin_model_path,
+                    multi_thread=True,
                     json_config_path="models/model_info.json"):
     # choose parameters
     post_processing = Post_Processing.GAUSSIAN
@@ -65,12 +67,24 @@ def inference_model(vid_path,
     vid_path = 0 if vid_path is None else vid_path
 
     cv2_disp_name = post_processing.name
-    cap = cv2.VideoCapture(vid_path)
+    # check if multi-threading is to be used
+    if multi_thread:
+        cap = VideoStreamMultiThreadWidget(vid_path)
+    else:
+        cap = cv2.VideoCapture(vid_path)
     ret, frame = cap.read()
     fps = ""
 
     while ret:
         t1 = time()
+        # for handling multi_threading load
+        try:
+            ret, frame = cap.read()
+            if frame is None:
+                raise AttributeError
+        except AttributeError:
+            continue
+
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         simg = cv2.resize(img, (in_h, in_w),
                           interpolation=cv2.INTER_AREA) / 255.0
@@ -122,7 +136,6 @@ def inference_model(vid_path,
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        ret, frame = cap.read()
         fps = f"FPS: {1/(time() - t1):.1f}"
 
 
@@ -131,10 +144,12 @@ def main():
     args = parser.parse_args()
     model_xml = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml"
     model_bin = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin"
-    inference_model(args.source_vid_path,
-                    args.bg_img_path,
-                    model_xml,
-                    model_bin)
+
+    inference_model(vid_path=args.source_vid_path,
+                    bg_img_path=args.bg_img_path,
+                    xml_model_path=model_xml,
+                    bin_model_path=model_bin,
+                    multi_thread=args.use_multi_thread)
 
 
 if __name__ == "__main__":

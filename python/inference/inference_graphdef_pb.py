@@ -1,4 +1,3 @@
-# loading tensorflow v1 model
 import cv2
 import numpy as np
 from time import time
@@ -7,7 +6,8 @@ import tensorflow as tf
 from tensorflow.python.platform import gfile
 
 # custom imports
-from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict
+from utils.inference import load_bgd, VideoStreamMultiThreadWidget
 tf.config.optimizer.set_jit(True)
 
 
@@ -21,6 +21,7 @@ class Post_Processing(Enum):
 def inference_model(vid_path,
                     bg_img_path,
                     pb_model_path,
+                    multi_thread=True,
                     json_config_path="models/model_info.json"):
     # choose parameters
     post_processing = Post_Processing.GAUSSIAN
@@ -66,12 +67,22 @@ def inference_model(vid_path,
         prob_tensor = sess.graph.get_tensor_by_name(output_layer)
         cv2_disp_name = post_processing.name
 
-        cap = cv2.VideoCapture(vid_path, cv2.CAP_AVFOUNDATION)
+        # check if multi-threading is to be used
+        if multi_thread:
+            cap = VideoStreamMultiThreadWidget(vid_path)
+        else:
+            cap = cv2.VideoCapture(vid_path)
         ret, frame = cap.read()
         fps = ""
         while ret:
-            # Capture frame-by-frame
             t1 = time()
+            # for handling multi_threading load
+            try:
+                ret, frame = cap.read()
+                if frame is None:
+                    raise AttributeError
+            except AttributeError:
+                continue
             img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             simg = cv2.resize(img, (in_h, in_w),
                               interpolation=cv2.INTER_AREA) / 255.0
@@ -118,19 +129,20 @@ def inference_model(vid_path,
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow(cv2_disp_name, frame[..., ::-1])
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
-            ret, frame = cap.read()
             fps = f"FPS: {1/(time() - t1):.1f}"
+        cv2.destroyAllWindows()
 
 
 def main():
     parser = get_cmd_argparser(
         default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.pb")
     args = parser.parse_args()
-    inference_model(args.source_vid_path,
-                    args.bg_img_path,
-                    args.model_path)
+    inference_model(vid_path=args.source_vid_path,
+                    bg_img_path=args.bg_img_path,
+                    pb_model_path=args.model_path,
+                    multi_thread=args.use_multi_thread)
 
 
 if __name__ == "__main__":

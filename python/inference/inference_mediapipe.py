@@ -5,6 +5,7 @@ import mediapipe as mp
 from time import time
 from enum import Enum
 from utils.inference import get_cmd_argparser, load_bgd
+from utils.inference import VideoStreamMultiThreadWidget
 
 
 class InferenceMode(Enum):
@@ -53,29 +54,37 @@ def image_inference(image_path_list):
                         str(idx) + '.png', output_image)
 
 
-def video_inference(video_src, bg_image_path, bg_mode=None):
+def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False):
     """
     video_src: path to video file or use 0 for webcam
     """
     video_src = 0 if video_src is None else video_src
-    cap = cv2.VideoCapture(video_src)
     disp_h, disp_w = 720, 1280
     bg_image = load_bgd(bg_image_path, disp_w, disp_h,
                         dtype=np.uint8, post_process=None)
+
+    # check if multi-threading is to be used
+    if multi_thread:
+        cap = VideoStreamMultiThreadWidget(video_src)
+    else:
+        cap = cv2.VideoCapture(video_src)
+    ret, frame = cap.read()
     fps = ""
     # model_selection=1 uses landscape mode
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=1) as selfie_segmentation:
-        while cap.isOpened():
+        while ret:
             itime = time()
-            success, image = cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                # If loading a video, use 'break' instead of 'continue'.
+            # for handling multi_threading load
+            try:
+                ret, frame = cap.read()
+                if frame is None:
+                    raise AttributeError
+            except AttributeError:
                 continue
 
             # Flip the image horizontally for a later selfie-view display, and convert
             # the BGR image to RGB.
-            image = cv2.cvtColor(cv2.flip(image, 1), cv2.COLOR_BGR2RGB)
+            image = cv2.cvtColor(cv2.flip(frame, 1), cv2.COLOR_BGR2RGB)
             # To improve performance, optionally mark the image as not writeable to
             # pass by reference.
             image.flags.writeable = False
@@ -108,10 +117,10 @@ def video_inference(video_src, bg_image_path, bg_mode=None):
             cv2.putText(output_image, fps, (disp_h - 180, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2, cv2.LINE_AA)
             cv2.imshow('Selfie Segmentation', output_image)
-            if cv2.waitKey(1) & 0xFF == 113:  # press "q" to stop
+            if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
             fps = f"FPS: {1/(time() - itime):.1f}"
-    cap.release()
+    cv2.destroyAllWindows()
 
 
 def inference_model(mode, **kwargs):
@@ -126,7 +135,8 @@ def main():
     args = parser.parse_args()
     inference_model(mode=InferenceMode.VIDEO,
                     video_src=args.source_vid_path,
-                    bg_image_path=args.bg_img_path)
+                    bg_image_path=args.bg_img_path,
+                    multi_thread=args.use_multi_thread)
 
 
 if __name__ == "__main__":
