@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(example)
 
-message(STATUS "env home directoy: $ENV{HOME}")
+message(STATUS "env home directory: $ENV{HOME}")
 
 find_library(TENSORFLOW_LIB tensorflow HINT $ENV{HOME}/libtensorflow/lib)
 

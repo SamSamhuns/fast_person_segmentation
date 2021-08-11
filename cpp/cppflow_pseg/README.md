@@ -31,7 +31,7 @@ Requires:
 
 -   Opencv C/C++ API
 
-Download [TensorFlow C API](https://www.tensorflow.org/install/lang_c) and put it in the home directory i.e. `/Users/username`. Install the opencv c++ library  as well (Using homebrew in OSX or alter path in `CMakeList.txt` for windows).
+Download [TensorFlow C API](https://www.tensorflow.org/install/lang_c) and put it in the home directory i.e. `/Users/username`. Install the opencv c++ library as well (Using homebrew in OSX or alter path in `CMakeList.txt` for windows).
 
 You can either install the library system wide by following the tutorial on the Tensorflow page or you can place the contents of the archive
 in a folder called `libtensorflow` in the home directory.
