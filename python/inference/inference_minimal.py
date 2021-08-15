@@ -23,7 +23,7 @@ def inference_model(vid_path,
     ksize = 3                   # gaussian smoothing kernel size
     p_thres = 0.75              # threshold for prediction
     bg_h, bg_w = 513, 513       # background height & width
-    disp_h, disp_w = 1000, 640  # final display screen width and height
+    disp_h, disp_w = 640, 1000  # final display screen width and height
     # Load background image, if path is None, use dark background
     bgd = load_bgd(bg_img_path, bg_w, bg_h)
 
@@ -33,7 +33,7 @@ def inference_model(vid_path,
     while ret:
         # Preprocess
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        simg = cv2.resize(img, (input_height, input_width),
+        simg = cv2.resize(img, (input_width, input_height),
                           interpolation=cv2.INTER_AREA)
         simg = simg.reshape((1, input_height, input_width, 3)) / 255.0
 
@@ -45,15 +45,15 @@ def inference_model(vid_path,
         msk = cv2.GaussianBlur(msk, ksize=(
             ksize, ksize), sigmaX=4, sigmaY=0)
 
-        msk = cv2.resize(msk, (bg_h, bg_w)).reshape((bg_h, bg_w, 1))
-        img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+        msk = cv2.resize(msk, (bg_w, bg_h)).reshape((bg_h, bg_w, 1))
+        img = cv2.resize(img, (bg_w, bg_h)) / 255.0
 
         # Alpha blending
         frame = (img * msk) + (bgd * (1 - msk))
 
         # resize to final resolution
         frame = np.uint8(frame * 255.0)
-        frame = cv2.resize(frame, (disp_h, disp_w),
+        frame = cv2.resize(frame, (disp_w, disp_h),
                            interpolation=cv2.INTER_LINEAR)
 
         # Display the resulting frame

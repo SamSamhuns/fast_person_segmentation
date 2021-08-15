@@ -26,7 +26,7 @@ def inference_model(vid_path,
     default_mopen_iter = 9
     default_gauss_ksize = 3
     bg_h, bg_w = 513, 513
-    disp_h, disp_w = 1200, 720
+    disp_h, disp_w = 720, 1200
 
     # Load background image, if path is None, use dark background
     def post_process(img): return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -62,7 +62,7 @@ def inference_model(vid_path,
         except AttributeError:
             continue
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        simg = cv2.resize(img, (in_h, in_w),
+        simg = cv2.resize(img, (in_w, in_h),
                           interpolation=cv2.INTER_AREA) / 255.0
         simg = np.expand_dims(simg, axis=0).astype(np.float32)
 
@@ -74,7 +74,7 @@ def inference_model(vid_path,
         """ MORPH_OPEN SMOOTHING """
         if post_processing == Post_Processing.MORPH_OPEN:
             msk = np.float32(out).reshape((in_h, in_w, 1))
-            msk = cv2.resize(msk, (bg_h, bg_w),
+            msk = cv2.resize(msk, (bg_w, bg_h),
                              interpolation=cv2.INTER_LINEAR).reshape((bg_h, bg_w, 1))
 
             # default kernel size (10, 10) and iterations =10
@@ -95,16 +95,16 @@ def inference_model(vid_path,
                                    sigmaY=0)
 
             msk = cv2.resize(msk,
-                             (bg_h, bg_w)).reshape((bg_h, bg_w, 1)) > default_threshold
+                             (bg_w, bg_h)).reshape((bg_h, bg_w, 1)) > default_threshold
 
         # Post-process
-        img = cv2.resize(img, (bg_h, bg_w))
+        img = cv2.resize(img, (bg_w, bg_h))
 
         # Alpha blending: (img * msk) + (bgd * (1 - msk))
         frame = np.where(msk, img, bgd).astype(np.uint8)
 
         # resize to final resolution
-        frame = cv2.resize(frame, (disp_h, disp_w),
+        frame = cv2.resize(frame, (disp_w, disp_h),
                            interpolation=cv2.INTER_LINEAR)
 
         # Display the resulting frame & FPS

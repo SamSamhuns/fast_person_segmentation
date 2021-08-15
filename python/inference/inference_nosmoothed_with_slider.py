@@ -62,7 +62,7 @@ def inference_model(vid_path,
 
         # Preprocess
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        simg = cv2.resize(img, (in_h, in_w), interpolation=cv2.INTER_AREA)
+        simg = cv2.resize(img, (in_w, in_h), interpolation=cv2.INTER_AREA)
         simg = simg.reshape((1, in_h, in_w, 3)) / 255.0
 
         if skip_frame == 0 or COUNT % skip_frame == 0:
@@ -73,12 +73,12 @@ def inference_model(vid_path,
                                    ksize=(ksize, ksize),
                                    sigmaX=4,
                                    sigmaY=0)
-            msk = cv2.resize(msk, (bg_h, bg_w)).reshape((bg_h, bg_w, 1))
+            msk = cv2.resize(msk, (bg_w, bg_h)).reshape((bg_h, bg_w, 1))
             COUNT = 0
         COUNT += 1
 
         # rescaling resize
-        img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+        img = cv2.resize(img, (bg_w, bg_h)) / 255.0
 
         # Alpha blending
         frame = (img * msk) + (bgd * (1 - msk))

@@ -46,7 +46,7 @@ def inference_model(vid_path,
     default_mopen_iter = 9
     default_gauss_ksize = 3
     bg_h, bg_w = 513, 513
-    disp_h, disp_w = 1200, 720
+    disp_h, disp_w = 720, 1200
 
     # Load Network and Executable
     OpenVinoIE, OpenVinoNetwork, OpenVinoExecutable = get_openvino_core_net_exec(
@@ -86,7 +86,7 @@ def inference_model(vid_path,
             continue
 
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        simg = cv2.resize(img, (in_h, in_w),
+        simg = cv2.resize(img, (in_w, in_h),
                           interpolation=cv2.INTER_AREA) / 255.0
         simg = simg.transpose((2, 0, 1))
         simg = np.expand_dims(simg, axis=0)
@@ -96,7 +96,7 @@ def inference_model(vid_path,
         """ MORPH_OPEN SMOOTHING """
         if post_processing == Post_Processing.MORPH_OPEN:
             msk = np.float32(out).reshape((in_h, in_w, 1))
-            msk = cv2.resize(msk, (bg_h, bg_w),
+            msk = cv2.resize(msk, (bg_w, bg_h),
                              interpolation=cv2.INTER_LINEAR).reshape((bg_h, bg_w, 1))
 
             # default kernel size (10, 10) and iterations =10
@@ -117,16 +117,16 @@ def inference_model(vid_path,
                                    sigmaY=0)
 
             msk = cv2.resize(msk,
-                             (bg_h, bg_w)).reshape((bg_h, bg_w, 1)) > default_threshold
+                             (bg_w, bg_h)).reshape((bg_h, bg_w, 1)) > default_threshold
         # Post-process
-        img = cv2.resize(img, (bg_h, bg_w)) / 255.0
+        img = cv2.resize(img, (bg_w, bg_h)) / 255.0
 
         # Alpha blending
         frame = (img * msk) + (bgd * (1 - msk))
 
         # resize to final resolution
         frame = np.uint8(frame * 255.0)
-        frame = cv2.resize(frame, (disp_h, disp_w),
+        frame = cv2.resize(frame, (disp_w, disp_h),
                            interpolation=cv2.INTER_LINEAR)
 
         # Display the resulting frame & FPS
@@ -144,7 +144,6 @@ def main():
     args = parser.parse_args()
     model_xml = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml"
     model_bin = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin"
-
     inference_model(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     xml_model_path=model_xml,
