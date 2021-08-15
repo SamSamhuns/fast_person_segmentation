@@ -26,10 +26,8 @@ mp_selfie_segmentation = mp.solutions.selfie_segmentation
 mp_holistic = mp.solutions.holistic
 mp_objectron = mp.solutions.objectron
 
-thres = 0.34
 
-
-def image_inference(image_path_list):
+def image_inference(image_path_list, thres=0.38):
     MASK_COLOR = (255, 255, 255)  # white
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=0) as selfie_segmentation:
 
@@ -54,7 +52,7 @@ def image_inference(image_path_list):
                         str(idx) + '.png', output_image)
 
 
-def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False):
+def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False, thres=0.8):
     """
     video_src: path to video file or use 0 for webcam
     """
@@ -97,10 +95,10 @@ def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False):
             # To improve segmentation around boundaries, consider applying a joint
             # bilateral filter to "results.segmentation_mask" with "image".
             mask = results.segmentation_mask
-            # mask = np.expand_dims(results.segmentation_mask, -1)
             # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (17, 17), iterations=9)
-            # mask = cv2.GaussianBlur(mask, ksize=(3, 3), sigmaX=4, sigmaY=0)
-            # mask = cv2.ximgproc.jointBilateralFilter(mask, image, 3, 5, 5)
+            # mask = cv2.GaussianBlur(mask, ksize=(17, 17), sigmaX=4, sigmaY=0)
+            # mask = cv2.erode(mask, (5, 5), iterations=5)
+            # mask = cv2.ximgproc.jointBilateralFilter(image.astype(np.float32), mask, 5, 35, 35)
 
             condition = np.stack((mask,) * 3, axis=-1) > thres
             # The background can be customized.
