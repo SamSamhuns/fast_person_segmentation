@@ -1,0 +1,7 @@
+mediapipe==0.8.6.2
+opencv-python==4.5.3.56
+openvino==2021.4.0
+scipy==1.7.1
+tensorflow==2.5.0; sys_platform == 'darwin'
+tensorflow-gpu==2.5.0; sys_platform == 'linux' or ; sys_platform == 'windows' 
+tensorflow_model_optimization==0.6.0
