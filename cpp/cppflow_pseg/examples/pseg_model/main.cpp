@@ -186,7 +186,8 @@ model_info_struct get_model_struct(std::string model_type) {
                 {"m1",1},
                 {"m2",2},
                 {"m3",3},
-                {"m4",4}
+                {"m4",4},
+                {"m5",4}
         };
 
         switch(model_num_map.count(model_type) ? model_num_map.at(model_type) : 0) {
@@ -221,6 +222,14 @@ model_info_struct get_model_struct(std::string model_type) {
                 input_layer = "input_3";
                 output_layer = "op/Sigmoid";
                 model_path = "../model_zoo/prisma_orig_s256.pb";
+                break;
+        case 5:
+                std::cout << "Model mnetv3_decoder chosen" << std::endl;
+                input_width = 256;
+                input_height = 144;
+                input_layer = "input_1";
+                output_layer = "segment";
+                model_path = "../model_zoo/mnetv3_decoder_144x256.pb";
                 break;
         case 0:   // for the undefined case
                 std::cout << "Error. Model type " << model_type << " not available" << std::endl;
