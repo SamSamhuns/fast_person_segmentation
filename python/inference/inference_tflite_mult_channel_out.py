@@ -21,10 +21,10 @@ def inference_model(vid_path,
                     multi_thread=True):
     # choose parameters
     post_processing = Post_Processing.GAUSSIAN
-    default_threshold = 0.7
+    default_threshold = 0.8
     default_mopen_ksize = 7
     default_mopen_iter = 9
-    default_gauss_ksize = 13
+    default_gauss_ksize = 5
     bg_h, bg_w = 513, 513
     disp_h, disp_w = 720, 1200
 
@@ -77,6 +77,8 @@ def inference_model(vid_path,
 
         """ MORPH_OPEN SMOOTHING """
         if post_processing == Post_Processing.MORPH_OPEN:
+            # since we are post-processing the bg mask
+            msk = cv2.dilate(msk, np.ones((3, 3), dtype=np.uint8), iterations=1)
             kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,
@@ -85,6 +87,8 @@ def inference_model(vid_path,
 
         """ GAUSSIAN SMOOTHING """
         if post_processing == Post_Processing.GAUSSIAN:
+            # since we are post-processing the bg mask
+            msk = cv2.dilate(msk, np.ones((3, 3), dtype=np.uint8), iterations=1)
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),

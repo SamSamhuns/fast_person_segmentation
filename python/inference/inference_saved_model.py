@@ -24,7 +24,7 @@ def inference_model(vid_path,
                     multi_thread=True):
     # choose parameters
     post_processing = Post_Processing.GAUSSIAN
-    default_threshold = 0.63
+    default_threshold = 0.8
     default_mopen_ksize = 7
     default_mopen_iter = 9
     default_gauss_ksize = 3
