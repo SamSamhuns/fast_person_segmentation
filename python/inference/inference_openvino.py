@@ -93,31 +93,27 @@ def inference_model(vid_path,
         # Predict
         results = OpenVinoExecutable.infer(inputs={InputLayer: simg})
         out = results[OutputLayer][0]
+
+        msk = np.float32(out).reshape((in_h, in_w, 1))
         """ MORPH_OPEN SMOOTHING """
         if post_processing == Post_Processing.MORPH_OPEN:
-            msk = np.float32(out).reshape((in_h, in_w, 1))
-            msk = cv2.resize(msk, (bg_w, bg_h),
-                             interpolation=cv2.INTER_LINEAR).reshape((bg_h, bg_w, 1))
-
-            # default kernel size (10, 10) and iterations =10
+            kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,
-                                   ksize=(default_mopen_ksize,
-                                          default_mopen_ksize),
-                                   iterations=default_mopen_iter).reshape(
-                (bg_h, bg_w, 1)) > default_threshold
+                                   kernel=kernel,
+                                   iterations=default_mopen_iter)
 
         """ GAUSSIAN SMOOTHING """
         if post_processing == Post_Processing.GAUSSIAN:
-            msk = np.float32(out).reshape((in_h, in_w, 1))
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),
                                    sigmaX=4,
                                    sigmaY=0)
+        msk = cv2.resize(
+            msk, (bg_w, bg_h)).reshape((
+                bg_h, bg_w, 1)) > default_threshold
 
-            msk = cv2.resize(msk,
-                             (bg_w, bg_h)).reshape((bg_h, bg_w, 1)) > default_threshold
         # Post-process
         img = cv2.resize(img, (bg_w, bg_h)) / 255.0
 
