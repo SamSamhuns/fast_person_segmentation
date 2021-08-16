@@ -13,11 +13,17 @@ The models were trained with standard(& custom) **portrait datasets** and their 
 
 _Note: This is a copy of the [Portrait Segmentation repo](https://github.com/anilsathyan7/Portrait-Segmentation) by Anil Sathyan_
 
-## Main Dependencies
+## Requirements
 
--   tensorflow(==1.14.0)
--   keras(>=2.2.4)
--   opencv(>=3.4)
+python==3.7
+
+-   mediapipe==0.8.6.2
+-   opencv-python==4.5.3.56
+-   openvino==2021.4.0
+-   scipy==1.7.1
+-   tensorflow==2.5.0; sys_platform == 'darwin'
+-   tensorflow-gpu==2.5.0; sys_platform == 'linux' or sys_platform == 'Windows'
+-   tensorflow_model_optimization==0.6.0
 
 _Note: conda_install.sh will install all the required dependencies_
 
@@ -29,7 +35,7 @@ _Note: conda_install.sh will install all the required dependencies_
 
 ## Pre-trained Weights
 
-Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/1wHmttTd073J3ccug1PfpsAnnmHaiEt_x/view?usp=sharing)
+Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](<>)
 
 ## Datasets
 
@@ -61,7 +67,7 @@ Useful tools for **data annotation and collection**:
 
 1.  **Offline Image Editors** - Pros: Free, High Accuracy; Cons: Manual Annotation Time; Eg: **GIMP, Photoshop** etc.
 2.  **Offline Image Annotation Tools** - Pros: Free, Good Accuracy; Cons: Manual Annotation Time; Eg: **cvat**, etc.
-3.  **Pretrained Models**: Pros - Fast, Easy to Use; Cons: Limited Accuracy; Eg: **Deeplab Xception, MaskRCNN** etc.
+3.  **Pre-trained Models**: Pros - Fast, Easy to Use; Cons: Limited Accuracy; Eg: **Deeplab Xception, MaskRCNN** etc.
 4.  **Online Annotation Tools** - Pros: Automated, Easy to Use, Flexible; Cons: Price; Eg: **Supervisely, Remove.bg**.
 5.  **Crowd Sourcing Tools** - Pros: Potential Size and Variety, Less Effort; Cons: Cost, Time, Quality; Eg: **Amazon MTurk, Freelancers**.
 
@@ -71,40 +77,45 @@ To use the model in mobile phones, it is important to include lots of **portrait
 
 ### Set up a conda virtual environment and run the following:
 
-`$ bash conda_install.sh`
+```bash
+$ bash conda_install.sh
+$ conda activate fastseg
+```
 
 Download the **dataset** from the link above and put them in **data** folder. Then run the scripts in the **following order**:
 
-```python
+```bash
 $   python train.py # Train the model on data-set
 $   python eval.py checkpoints/<CHECKPOINT_PATH.hdf5> # Evaluate the model on test-set
 $   python export.py checkpoints/<CHECKPOINT_PATH.hdf5> # Export the model for deployment
 $   python test.py <TEST_IMAGE_PATH.jpg> # Test the model on a single image
 $   ./run_inference.sh inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam replacing bg with media/img/beach.jpg
-$   ./run_inference.sh inference/inference_openvino.py                # 35 FPS, Run the model using openvino inference engine
-$   ./run_inference.sh inference/inference_tensorflow_pb.py           # 24 FPS, run model with tensorflow v1 frozen graph inference
-$   ./run_inference.sh inference/inference_nosmoothed_with_slider.py  # 19 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-$   ./run_inference.sh inference/inference_smoothed_with_slider.py    # 19 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-$   ./run_inference.sh inference/inference_tflite.py                  # 11 FPS, Run the model using tflite interpreter
+$   ./run_inference.sh inference/inference_openvino.py                # 30 FPS, Run the model using openvino inference engine
+$   ./run_inference.sh inference/inference_graphdef_pb.py             # 23 FPS, run model with tensorflow v1 frozen graph inference
+$   ./run_inference.sh inference/inference_nosmoothed_with_slider.py  # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+$   ./run_inference.sh inference/inference_smoothed_with_slider.py    # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+$   ./run_inference.sh inference/inference_tflite.py                  # 25 FPS, Run the model using tflite interpreter
 $   ./run_inference.sh inference/inference_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
 $   ./run_inference.sh inference/inference_seg_video.py               # Apply blending filters on video
+$   ./run_inference.sh inference/inference_mediapipe.py               # mediapipe person segmentation
+$   ./run_inference.sh inference/inference_tflite_mult_channel_out.py # person segmentation with 2 channel tflite model, best perf
 ```
 
 ## Mobile-Unet Architecture
 
-Here we use **Mobilenet v2** with **depth multiplier 0.5** as encoder (feature extractor).
+Here we use **MobileNet-V2** with **depth multiplier 0.5** as encoder (feature extractor).
 
-For the **decoder part**, we have two variants. A upsampling block with either  **Transpose Convolution** or **Upsample2D+Convolution**. The former has a **stride of 2**, whereas the later uses **resize bilinear** for upsampling, along with Conv2d. Encoder and decoder section must have proper **skip connections** for better results. Additionally, we use **dropout** regularization to prevent **overfitting**.It also helps our network to learn more **robust** features during training.
+For the **decoder part**, we have two variants. A upsampling block with either  **Transpose Convolution** or **Upsample2D+Convolution**. The former has a **stride of 2**, whereas the later uses **resize bilinear** for upsampling, along with Conv2D. Encoder and decoder section must have proper **skip connections** for better results. Additionally, we use **dropout** regularization to prevent **overfitting**.It also helps our network to learn more **robust** features during training.
 
 ## Training graphs
 
-Since we are using a **pretrained mobilenetv2** as encoder for a head start, the training **quickly converges to 90% accuracy** within first couple of epochs. Also, we use a flexible **learning rate schedule** (ReduceLROnPlateau) for training the model.
+Since we are using a **pretrained mobilenet-v2** as encoder for a head start, the training **quickly converges to 90% accuracy** within first couple of epochs. Also, we use a flexible **learning rate schedule** (ReduceLROnPlateau) for training the model.
 
 ### Result
 
 #### 1. Model Type - 1
 
-Here the **inputs and outputs** are images of size **128x128**.The backbone is **mobilenetv2** with **depth multiplier 0.5**.
+Here the **inputs and outputs** are images of size **128x128**.The backbone is **mobilenet-v2** with **depth multiplier 0.5**.
 The **first row** represents the **input** and the **second row** shows the corresponding **cropped image** obtained by cropping the input image with the **mask output** of the model.
 
 ![Screenshot](media/readme_images/result.png)
@@ -141,7 +152,7 @@ The **first row** represents the **input** and the **second row** shows the corr
 
 When there are objects like **clothes, bags** etc. in the background the model fails to segment them properly as background, especially if they seem connected to the foreground person. Also if there are **variations in lighting** or illumination within the image, there seems to be a **flickering** effect on the video resulting in holes in the foreground object.
 
-#### Quantizing MobilenetV3 Models With Keras API
+#### Quantizing Mobilenet-V3 Models With Keras API
 
 **MobileNetV3** is the next generation of on-device deep vision model from Google. It is twice as fast as MobileNetV2 with equivalent accuracy, and advances the state-of-the-art for mobile computer vision networks. Here we use small version of **mobilenetv3** with input size 256 as the encoder part of the network. In the **decoder** module we use **transition blocks** along with upsampling layers, similar to the decoder modules in the portrait-net architecture. There are two branches in this block: one branch contains two **depthwise separable convolutions** and the other contains a single **1×1 convolution** to adjust the number of channels. For upsampling we use **bilinear resize** along with the transition blocks in the decoder module. In the case of **skip connections** between encoder and decoder, we use **element-wise addition** instead of concatenation for faster inference speed.
 
