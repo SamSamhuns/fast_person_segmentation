@@ -3,24 +3,17 @@ import numpy as np
 import tensorflow as tf
 
 from time import time
-from enum import Enum
-from utils.inference import get_cmd_argparser, load_bgd
-from utils.inference import VideoStreamMultiThreadWidget
-
-
-class Post_Processing(Enum):
-    """Post_Processing methods
-    """
-    GAUSSIAN = "gaussian"
-    MORPH_OPEN = "morph_open"
+from utils.inference import PostProcessingType, get_cmd_argparser, load_bgd, ImageioVideoWriter
+from utils.inference import VideoStreamMultiThreadWidget, get_frame_after_postprocess
 
 
 def inference_model(vid_path,
                     bg_img_path,
                     tflite_model_path,
-                    multi_thread=True):
+                    multi_thread=True,
+                    output_dir=None):
     # choose parameters
-    post_processing = Post_Processing.GAUSSIAN
+    post_processing = PostProcessingType.GAUSSIAN
     default_threshold = 0.63
     default_mopen_ksize = 7
     default_mopen_iter = 9
@@ -50,6 +43,9 @@ def inference_model(vid_path,
         cap = VideoStreamMultiThreadWidget(vid_path)
     else:
         cap = cv2.VideoCapture(vid_path)
+    if output_dir is not None:
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+
     ret, frame = cap.read()
     fps = ""
     while ret:
@@ -61,12 +57,14 @@ def inference_model(vid_path,
                 raise AttributeError
         except AttributeError:
             continue
+
+        # preprocess
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         simg = cv2.resize(img, (in_w, in_h),
                           interpolation=cv2.INTER_AREA) / 255.0
         simg = np.expand_dims(simg, axis=0).astype(np.float32)
 
-        # Predict Segmentation
+        # predict segmentation
         interpreter.set_tensor(input_node, simg)
         interpreter.invoke()
         out = interpreter.get_tensor(output_node)
@@ -74,34 +72,24 @@ def inference_model(vid_path,
         msk = np.float32(out).reshape((in_h, in_w, 1))
 
         """ MORPH_OPEN SMOOTHING """
-        if post_processing == Post_Processing.MORPH_OPEN:
-            kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
+        if post_processing == PostProcessingType.MORPH_OPEN:
+            kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
+                default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,
                                    kernel=kernel,
                                    iterations=default_mopen_iter)
 
         """ GAUSSIAN SMOOTHING """
-        if post_processing == Post_Processing.GAUSSIAN:
+        if post_processing == PostProcessingType.GAUSSIAN:
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),
                                    sigmaX=4,
                                    sigmaY=0)
-
-        msk = cv2.resize(
-            msk, (bg_w, bg_h)).reshape((
-                bg_h, bg_w, 1)) > default_threshold
-
-        # Post-process
-        img = cv2.resize(img, (bg_w, bg_h))
-
-        # Alpha blending: (img * msk) + (bgd * (1 - msk))
-        frame = np.where(msk, img, bgd).astype(np.uint8)
-
-        # resize to final resolution
-        frame = cv2.resize(frame, (disp_w, disp_h),
-                           interpolation=cv2.INTER_LINEAR)
+        # postprocess
+        frame = get_frame_after_postprocess(
+            msk, img, bgd, (bg_w, bg_h), (disp_w, disp_h), default_threshold)
 
         # Display the resulting frame & FPS
         cv2.putText(frame, fps, (disp_h - 180, 30),
@@ -110,17 +98,22 @@ def inference_model(vid_path,
 
         if cv2.waitKey(1) == 113:  # press "q" to stop
             break
+        vwriter.write_frame(frame) if output_dir else None
         fps = f"FPS: {1/(time() - t1):.1f}"
+    vwriter.close() if output_dir else None
+    cap.release()
     cv2.destroyAllWindows()
 
 
 def main():
-    parser = get_cmd_argparser(default_model="models/transpose_seg/deconv_fin_munet.tflite")
+    parser = get_cmd_argparser(
+        default_model="models/transpose_seg/deconv_fin_munet.tflite")
     args = parser.parse_args()
     inference_model(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     tflite_model_path=args.model_path,
-                    multi_thread=args.use_multi_thread)
+                    multi_thread=args.use_multi_thread,
+                    output_dir=args.output_dir)
 
 
 if __name__ == "__main__":

@@ -140,3 +140,6 @@ dmypy.json
 
 # model repository
 python/models
+
+# media files
+*.mp4

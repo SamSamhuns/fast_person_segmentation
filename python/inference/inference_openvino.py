@@ -1,21 +1,11 @@
-# loading tensorflow v1 model
 import cv2
 import numpy as np
 from time import time
-from enum import Enum
 
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
-# custom imports
-from utils.inference import get_cmd_argparser, get_config_dict
-from utils.inference import load_bgd, VideoStreamMultiThreadWidget
-
-
-class Post_Processing(Enum):
-    """Post_Processing methods
-    """
-    GAUSSIAN = "gaussian"
-    MORPH_OPEN = "morph_open"
+from utils.inference import PostProcessingType, get_cmd_argparser, get_config_dict
+from utils.inference import load_bgd, VideoStreamMultiThreadWidget, ImageioVideoWriter, get_frame_after_postprocess
 
 
 def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CPU"):
@@ -38,9 +28,10 @@ def inference_model(vid_path,
                     xml_model_path,
                     bin_model_path,
                     multi_thread=True,
-                    json_config_path="models/model_info.json"):
+                    json_config_path="models/model_info.json",
+                    output_dir=None):
     # choose parameters
-    post_processing = Post_Processing.GAUSSIAN
+    post_processing = PostProcessingType.GAUSSIAN
     default_threshold = 0.63
     default_mopen_ksize = 7
     default_mopen_iter = 9
@@ -72,9 +63,11 @@ def inference_model(vid_path,
         cap = VideoStreamMultiThreadWidget(vid_path)
     else:
         cap = cv2.VideoCapture(vid_path)
+    if output_dir is not None:
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+
     ret, frame = cap.read()
     fps = ""
-
     while ret:
         t1 = time()
         # for handling multi_threading load
@@ -96,7 +89,7 @@ def inference_model(vid_path,
 
         msk = np.float32(out).reshape((in_h, in_w, 1))
         """ MORPH_OPEN SMOOTHING """
-        if post_processing == Post_Processing.MORPH_OPEN:
+        if post_processing == PostProcessingType.MORPH_OPEN:
             kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,
@@ -104,26 +97,15 @@ def inference_model(vid_path,
                                    iterations=default_mopen_iter)
 
         """ GAUSSIAN SMOOTHING """
-        if post_processing == Post_Processing.GAUSSIAN:
+        if post_processing == PostProcessingType.GAUSSIAN:
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),
                                    sigmaX=4,
                                    sigmaY=0)
-        msk = cv2.resize(
-            msk, (bg_w, bg_h)).reshape((
-                bg_h, bg_w, 1)) > default_threshold
-
-        # Post-process
-        img = cv2.resize(img, (bg_w, bg_h)) / 255.0
-
-        # Alpha blending
-        frame = (img * msk) + (bgd * (1 - msk))
-
-        # resize to final resolution
-        frame = np.uint8(frame * 255.0)
-        frame = cv2.resize(frame, (disp_w, disp_h),
-                           interpolation=cv2.INTER_LINEAR)
+        # postprocess
+        frame = get_frame_after_postprocess(
+            msk, img, bgd, (bg_w, bg_h), (disp_w, disp_h), default_threshold)
 
         # Display the resulting frame & FPS
         cv2.putText(frame, fps, (disp_h - 180, 30),
@@ -132,7 +114,11 @@ def inference_model(vid_path,
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+        vwriter.write_frame(frame) if output_dir else None
         fps = f"FPS: {1/(time() - t1):.1f}"
+    vwriter.close() if output_dir else None
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 def main():
@@ -144,7 +130,8 @@ def main():
                     bg_img_path=args.bg_img_path,
                     xml_model_path=model_xml,
                     bin_model_path=model_bin,
-                    multi_thread=args.use_multi_thread)
+                    multi_thread=args.use_multi_thread,
+                    output_dir=args.output_dir)
 
 
 if __name__ == "__main__":

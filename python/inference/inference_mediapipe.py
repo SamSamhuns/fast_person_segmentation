@@ -5,7 +5,7 @@ import mediapipe as mp
 from time import time
 from enum import Enum
 from utils.inference import get_cmd_argparser, load_bgd
-from utils.inference import VideoStreamMultiThreadWidget
+from utils.inference import VideoStreamMultiThreadWidget, ImageioVideoWriter
 
 
 class InferenceMode(Enum):
@@ -52,20 +52,23 @@ def image_inference(image_path_list, thres=0.38):
                         str(idx) + '.png', output_image)
 
 
-def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False, thres=0.8):
+def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, thres=0.8, output_dir=None):
     """
-    video_src: path to video file or use 0 for webcam
+    vid_path: path to video file or use 0 for webcam
     """
-    video_src = 0 if video_src is None else video_src
+    vid_path = 0 if vid_path is None else vid_path
     disp_h, disp_w = 720, 1280
     bg_image = load_bgd(bg_image_path, disp_w, disp_h,
                         dtype=np.uint8, post_process=None)
 
     # check if multi-threading is to be used
     if multi_thread:
-        cap = VideoStreamMultiThreadWidget(video_src)
+        cap = VideoStreamMultiThreadWidget(vid_path)
     else:
-        cap = cv2.VideoCapture(video_src)
+        cap = cv2.VideoCapture(vid_path)
+    if output_dir is not None:
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+
     ret, frame = cap.read()
     fps = ""
     # model_selection=1 uses landscape mode
@@ -117,8 +120,11 @@ def video_inference(video_src, bg_image_path, bg_mode=None, multi_thread=False, 
             cv2.imshow('Selfie Segmentation', output_image)
             if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
+            vwriter.write_frame(output_image[..., ::-1]) if output_dir else None
             fps = f"FPS: {1/(time() - itime):.1f}"
-    cv2.destroyAllWindows()
+        vwriter.close() if output_dir else None
+        cap.release()
+        cv2.destroyAllWindows()
 
 
 def inference_model(mode, **kwargs):
@@ -132,9 +138,10 @@ def main():
     parser = get_cmd_argparser(default_model=None)
     args = parser.parse_args()
     inference_model(mode=InferenceMode.VIDEO,
-                    video_src=args.source_vid_path,
+                    vid_path=args.source_vid_path,
                     bg_image_path=args.bg_img_path,
-                    multi_thread=args.use_multi_thread)
+                    multi_thread=args.use_multi_thread,
+                    output_dir=args.output_dir)
 
 
 if __name__ == "__main__":

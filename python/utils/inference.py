@@ -2,12 +2,20 @@
 from threading import Thread
 from os import makedirs
 from time import sleep
+from enum import Enum
 import os.path as osp
 import numpy as np
 import argparse
 import imageio
 import json
 import cv2
+
+
+class PostProcessingType(Enum):
+    """Post_Processing methods
+    """
+    GAUSSIAN = "gaussian"
+    MORPH_OPEN = "morph_open"
 
 
 class VideoStreamMultiThreadWidget(object):
@@ -31,20 +39,23 @@ class VideoStreamMultiThreadWidget(object):
         cv2.imshow('frame', self.frame)
         key = cv2.waitKey(1)
         if key == ord('q'):
-            self.capture.release()
+            self.release()
             cv2.destroyAllWindows()
             exit(1)
 
     def read(self):
         return self.capture.isOpened(), self.frame
 
+    def release(self):
+        self.capture.release()
+
 
 class ImageioVideoWriter(object):
 
-    def __init__(self, output_save_path, video_name, fps=25):
-        makedirs(output_save_path, exist_ok=True)
+    def __init__(self, output_dir, video_name, fps=25):
+        makedirs(output_dir, exist_ok=True)
         video_name = osp.basename(video_name).split('.')[0] + ".mp4"
-        video_save_path = osp.join(output_save_path, video_name)
+        video_save_path = osp.join(output_dir, video_name)
         print(f"INFO: Output video will be saved in {video_save_path}")
         self.writer = imageio.get_writer(video_save_path, fps=fps)
 
@@ -87,9 +98,9 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
                         required=False,
                         help="Flag to use multi_thread for opencv video io. Default is to use single thread")
     parser.add_argument('-o',
-                        '--output_save_path',
+                        '--output_dir',
                         default=None,
-                        help="Path to dir where inferenced video will be saved if path is not None")
+                        help="Dir where inferenced video will be saved if path is not None")
     return parser
 
 
@@ -107,12 +118,12 @@ def get_config_dict(model_path, json_config_path):
     return config_dict
 
 
-def _default_post_process(img):
+def _default_bg_load_transform(img):
     """ Convert to RGB space and normlize to [0,1] range """
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB) / 255.0
 
 
-def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_post_process):
+def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg_load_transform):
     """
     loads & preprocesses bg img
     if bg_img_path is None, return a black image image
@@ -127,3 +138,20 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_po
     else:
         raise Exception(f"{bg_img_path} not a path to image")
     return bgd
+
+
+def get_frame_after_postprocess(msk, img, bgd, bg_wh, disp_wh, threshold, foreground="img"):
+    bg_w, bg_h = bg_wh
+    disp_w, disp_h = disp_wh
+    # resize mask to bg size and apply thres
+    msk = cv2.resize(msk, (bg_w, bg_h)).reshape(
+        (bg_h, bg_w, 1)) > threshold
+    img = cv2.resize(img, (bg_w, bg_h))
+    # alpha blending: frame = (img * msk) + (bgd * (1 - msk))
+    if foreground == "img":
+        frame = np.where(msk, img, bgd).astype(np.uint8)
+    elif foreground == "bgd":
+        frame = np.where(msk, bgd, img).astype(np.uint8)
+    # resize to final resolution
+    frame = cv2.resize(frame, (disp_w, disp_h))
+    return frame
