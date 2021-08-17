@@ -4,7 +4,8 @@ import numpy as np
 import cv2
 
 # custom util import
-from utils.inference import get_cmd_argparser, get_config_dict, load_bgd
+from utils.inference import get_cmd_argparser, get_config_dict
+from utils.inference import load_bgd, ImageioVideoWriter, VideoStreamMultiThreadWidget
 
 
 def nothing(x):
@@ -14,7 +15,9 @@ def nothing(x):
 def inference_model(vid_path,
                     bg_img_path,
                     model_path,
-                    json_config_path="models/model_info.json"):
+                    multi_thread=True,
+                    json_config_path="models/model_info.json",
+                    output_save_path=None):
     # load model config from json file
     config_dict = get_config_dict(model_path, json_config_path)
     in_h, in_w = config_dict["in_height"], config_dict["in_width"]
@@ -49,10 +52,23 @@ def inference_model(vid_path,
     cv2.createTrackbar('mopen_iter', cv2_disp_name,
                        default_mopen_iter, 20, nothing)  # default 2
 
-    cap = cv2.VideoCapture(vid_path)
+    # check if multi-threading is to be used
+    if multi_thread:
+        cap = VideoStreamMultiThreadWidget(vid_path)
+    else:
+        cap = cv2.VideoCapture(vid_path)
     ret, frame = cap.read()
+    if output_save_path is not None:
+        vwriter = ImageioVideoWriter(output_save_path, str(vid_path))
     while ret:
         t1 = time()
+        # for handling multi_threading load
+        try:
+            ret, frame = cap.read()
+            if frame is None:
+                raise AttributeError
+        except AttributeError:
+            continue
         # get current positions of trackbars
         p_thres = cv2.getTrackbarPos('threshold', cv2_disp_name) / 20
         skip_frame = cv2.getTrackbarPos('skip_frame', cv2_disp_name) + 1
@@ -94,9 +110,11 @@ def inference_model(vid_path,
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
         cv2.imshow(cv2_disp_name, frame[..., ::-1])
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if output_save_path is not None:
+            vwriter.write_frame(frame)
+
+        if cv2.waitKey(1) == 113:  # press "q" to stop
             break
-        ret, frame = cap.read()
         fps = f"FPS: {1/(time() - t1):.1f}"
 
     print("Final values upon exit")
@@ -104,14 +122,18 @@ def inference_model(vid_path,
           f"p_thres={p_thres}", f"skip_frame={skip_frame}")
     cap.release()
     cv2.destroyAllWindows()
+    if output_save_path is not None:
+        vwriter.close()
 
 
 def main():
     parser = get_cmd_argparser()
     args = parser.parse_args()
-    inference_model(args.source_vid_path,
-                    args.bg_img_path,
-                    args.model_path)
+    inference_model(vid_path=args.source_vid_path,
+                    bg_img_path=args.bg_img_path,
+                    model_path=args.model_path,
+                    multi_thread=args.use_multi_thread,
+                    output_save_path=args.output_save_path)
 
 
 if __name__ == "__main__":

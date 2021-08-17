@@ -1,9 +1,11 @@
 # utils for model inference
 from threading import Thread
+from os import makedirs
 from time import sleep
 import os.path as osp
 import numpy as np
 import argparse
+import imageio
 import json
 import cv2
 
@@ -37,6 +39,25 @@ class VideoStreamMultiThreadWidget(object):
         return self.capture.isOpened(), self.frame
 
 
+class ImageioVideoWriter(object):
+
+    def __init__(self, output_save_path, video_name, fps=25):
+        makedirs(output_save_path, exist_ok=True)
+        video_name = osp.basename(video_name).split('.')[0] + ".mp4"
+        video_save_path = osp.join(output_save_path, video_name)
+        print(f"INFO: Output video will be saved in {video_save_path}")
+        self.writer = imageio.get_writer(video_save_path, fps=fps)
+
+    def write_frame(self, image):
+        if isinstance(image, str):
+            self.writer.append_data(imageio.imread(image))
+        else:
+            self.writer.append_data(image)
+
+    def close(self):
+        self.writer.close()
+
+
 def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5"):
     """
     get a argparse.ArgumentParser object, must run parser.parse_args() to parse cmd args
@@ -65,6 +86,10 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
                         action="store_true",
                         required=False,
                         help="Flag to use multi_thread for opencv video io. Default is to use single thread")
+    parser.add_argument('-o',
+                        '--output_save_path',
+                        default=None,
+                        help="Path to dir where inferenced video will be saved if path is not None")
     return parser
 
 

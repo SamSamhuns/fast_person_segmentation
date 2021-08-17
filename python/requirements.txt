@@ -1,3 +1,5 @@
+imageio==2.9.0
+imageio-ffmpeg==0.4.4
 mediapipe==0.8.6.2
 opencv-python==4.5.3.56
 openvino==2021.4.0
