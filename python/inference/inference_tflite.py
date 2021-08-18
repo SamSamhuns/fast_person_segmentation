@@ -51,11 +51,8 @@ def inference_model(vid_path,
     while ret:
         t1 = time()
         # for handling multi_threading load
-        try:
-            ret, frame = cap.read()
-            if frame is None:
-                raise AttributeError
-        except AttributeError:
+        ret, frame = cap.read()
+        if frame is None:
             continue
 
         # preprocess

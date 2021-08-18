@@ -21,7 +21,8 @@ class VideoStreamMultiThreadWidget(object):
     def __init__(self, src=0):
         print(f"INFO: Setting up multi-threading video IO from src {src}")
         self.capture = cv2.VideoCapture(src)
-        # start a thread to read frames from the video stream
+        self.status = self.capture.isOpened()
+        # immediately start a thread to read frames from the video stream
         self.thread = Thread(target=self.update, args=())
         self.thread.daemon = True
         self.thread.start()
@@ -32,18 +33,12 @@ class VideoStreamMultiThreadWidget(object):
         while True:
             if self.capture.isOpened():
                 self.status, self.frame = self.capture.read()
-            sleep(.01)
-
-    def show_frame(self):
-        cv2.imshow('frame', self.frame)
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            self.release()
-            cv2.destroyAllWindows()
-            exit(1)
+            else:
+                return
+            sleep(.005)
 
     def read(self):
-        return self.capture.isOpened(), self.frame
+        return self.status, self.frame
 
     def release(self):
         self.capture.release()

@@ -61,11 +61,8 @@ def inference_model(vid_path,
         # Capture frame-by-frame
         t1 = time()
         # for handling multi_threading load
-        try:
-            ret, frame = cap.read()
-            if frame is None:
-                raise AttributeError
-        except AttributeError:
+        ret, frame = cap.read()
+        if frame is None:
             continue
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         simg = cv2.resize(img, (in_w, in_h),

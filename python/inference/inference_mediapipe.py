@@ -76,11 +76,8 @@ def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, t
         while ret:
             itime = time()
             # for handling multi_threading load
-            try:
-                ret, frame = cap.read()
-                if frame is None:
-                    raise AttributeError
-            except AttributeError:
+            ret, frame = cap.read()
+            if frame is None:
                 continue
 
             # Flip the image horizontally for a later selfie-view display, and convert
@@ -98,10 +95,7 @@ def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, t
             # To improve segmentation around boundaries, consider applying a joint
             # bilateral filter to "results.segmentation_mask" with "image".
             mask = results.segmentation_mask
-            # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, (17, 17), iterations=9)
             # mask = cv2.GaussianBlur(mask, ksize=(17, 17), sigmaX=4, sigmaY=0)
-            # mask = cv2.erode(mask, (5, 5), iterations=5)
-            # mask = cv2.ximgproc.jointBilateralFilter(image.astype(np.float32), mask, 5, 35, 35)
 
             condition = np.stack((mask,) * 3, axis=-1) > thres
             # The background can be customized.
