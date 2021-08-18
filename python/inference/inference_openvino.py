@@ -4,8 +4,8 @@ from time import time
 
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
-from utils.inference import PostProcessingType, get_cmd_argparser, get_config_dict
-from utils.inference import load_bgd, VideoStreamMultiThreadWidget, ImageioVideoWriter, get_frame_after_postprocess
+from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
 
 
 def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CPU"):
@@ -64,7 +64,7 @@ def inference_model(vid_path,
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
-        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
     ret, frame = cap.read()
     fps = ""

@@ -3,8 +3,8 @@ from time import time
 import numpy as np
 import cv2
 
-from utils.inference import load_bgd, ImageioVideoWriter, VideoStreamMultiThreadWidget
-from utils.inference import get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import ImageioVideoWriter, VideoStreamMultiThreadWidget
 
 
 def nothing(x):
@@ -58,7 +58,7 @@ def inference_model(vid_path,
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
-        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
     ret, frame = cap.read()
     while ret:
         t1 = time()

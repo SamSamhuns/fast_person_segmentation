@@ -1,9 +1,10 @@
-# loading tensorflow v1 model
 import cv2
 import numpy as np
 from time import time
-from utils.inference import get_cmd_argparser, get_config_dict, load_bgd, ImageioVideoWriter
-from utils.inference import PostProcessingType, VideoStreamMultiThreadWidget, get_frame_after_postprocess
+
+from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
+
 
 import tensorflow as tf
 tf.config.optimizer.set_jit(True)
@@ -52,7 +53,7 @@ def inference_model(vid_path,
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
-        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
     ret, frame = cap.read()
     fps = ""

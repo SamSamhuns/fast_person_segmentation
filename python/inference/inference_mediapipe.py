@@ -67,7 +67,7 @@ def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, t
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
-        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
     ret, frame = cap.read()
     fps = ""

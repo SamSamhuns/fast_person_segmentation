@@ -3,8 +3,8 @@ import numpy as np
 import tensorflow as tf
 
 from time import time
-from utils.inference import PostProcessingType, get_cmd_argparser, load_bgd, ImageioVideoWriter
-from utils.inference import VideoStreamMultiThreadWidget, get_frame_after_postprocess
+from utils.inference import load_bgd, get_cmd_argparser, get_frame_after_postprocess
+from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
 
 
 def inference_model(vid_path,
@@ -44,7 +44,7 @@ def inference_model(vid_path,
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
-        vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+        vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
     ret, frame = cap.read()
     fps = ""

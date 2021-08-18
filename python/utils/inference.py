@@ -1,9 +1,8 @@
 # utils for model inference
+from pathlib import Path, PurePath
 from threading import Thread
-from os import makedirs
 from time import sleep
 from enum import Enum
-import os.path as osp
 import numpy as np
 import argparse
 import imageio
@@ -52,10 +51,11 @@ class VideoStreamMultiThreadWidget(object):
 
 class ImageioVideoWriter(object):
 
-    def __init__(self, output_dir, video_name, fps=25):
-        makedirs(output_dir, exist_ok=True)
-        video_name = osp.basename(video_name).split('.')[0] + ".mp4"
-        video_save_path = osp.join(output_dir, video_name)
+    def __init__(self, output_dir, video_name, model_fname, fps=25):
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        video_name = Path(model_fname).stem + Path(video_name).stem + ".mp4"
+        video_save_path = str(PurePath(output_dir, video_name))
+
         print(f"INFO: Output video will be saved in {video_save_path}")
         self.writer = imageio.get_writer(video_save_path, fps=fps)
 
@@ -113,7 +113,7 @@ def get_config_dict(model_path, json_config_path):
     config_dict = {}
     with open(json_config_path) as cfile:
         config_dict = json.load(cfile)
-        config_dict = config_dict[osp.basename(model_path).split('.')[0]]
+        config_dict = config_dict[Path(model_path).stem]
 
     return config_dict
 
@@ -130,7 +130,7 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg
     """
     if bg_img_path is None:
         bgd = np.zeros([bg_h, bg_w, 3], dtype=dtype)
-    elif isinstance(bg_img_path, str) and osp.isfile(bg_img_path):
+    elif isinstance(bg_img_path, str) and Path.isfile(bg_img_path):
         bgd = cv2.resize(cv2.imread(bg_img_path),
                          (bg_w, bg_h)).astype(dtype)
         if post_process is not None:

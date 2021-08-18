@@ -4,9 +4,8 @@ from time import time
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 
-# custom imports
-from utils.inference import PostProcessingType, get_cmd_argparser, get_config_dict
-from utils.inference import load_bgd, VideoStreamMultiThreadWidget, ImageioVideoWriter, get_frame_after_postprocess
+from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
 tf.config.optimizer.set_jit(True)
 
 
@@ -64,7 +63,7 @@ def inference_model(vid_path,
         else:
             cap = cv2.VideoCapture(vid_path)
         if output_dir is not None:
-            vwriter = ImageioVideoWriter(output_dir, str(vid_path))
+            vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
         ret, frame = cap.read()
         fps = ""
