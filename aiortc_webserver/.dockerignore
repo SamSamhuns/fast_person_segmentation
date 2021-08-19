@@ -1,0 +1,11 @@
+.ipynb_checkpoints/*
+/notebooks/*
+.git
+
+README.md
+Dockerfile
+.DS_Store
+.gitignore
+
+env.*
+venv*
