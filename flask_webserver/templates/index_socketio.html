@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>Person Segmentation Socket.io</title>
+</head>
+
+<body>
+  <div id="container" style='width:800px; margin:0 auto;'>
+    <canvas id="canvasOutput"></canvas>
+    <video autoplay="true" id="videoElement"></video>
+  </div>
+
+  <div class='video' style='width:800px; margin:0 auto;'>
+    <img id="image">
+  </div>
+
+  <script src="static/socket.io.min.js"></script>
+  <script src="static/html_video_capture.js"></script>
+  <script>
+    var socket = io('http://localhost:8080');
+
+    socket.on('connect', function() {
+      console.log("Connected...!", socket.connected)
+    });
+
+    const video = document.querySelector("#videoElement");
+
+    video.width = 500;
+    video.height = 375;
+
+    if (navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+          video: true
+        })
+        .then(function(stream) {
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(function(err0r) {
+          console.log(err0r)
+          console.log("Something went wrong!");
+        });
+    }
+
+    const FPS = 60;
+    setInterval(() => {
+      var type = "image/png"
+      var video_element = document.getElementById("videoElement")
+      var frame = capture(video_element, 1)
+      var data = frame.toDataURL(type);
+      data = data.replace('data:' + type + ';base64,', ''); // split off junk at the beginning
+
+      socket.emit('image', data);
+    }, 10000 / FPS);
+
+
+    socket.on('response_back', function(image) {
+      const image_id = document.getElementById('image');
+      image_id.src = image;
+    });
+  </script>
+
+</body>
+</html>
