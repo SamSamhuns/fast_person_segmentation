@@ -125,7 +125,7 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg
     """
     if bg_img_path is None:
         bgd = np.zeros([bg_h, bg_w, 3], dtype=dtype)
-    elif isinstance(bg_img_path, str) and Path.isfile(bg_img_path):
+    elif isinstance(bg_img_path, str) and Path(bg_img_path).is_file():
         bgd = cv2.resize(cv2.imread(bg_img_path),
                          (bg_w, bg_h)).astype(dtype)
         if post_process is not None:
