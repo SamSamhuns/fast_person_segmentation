@@ -143,3 +143,7 @@ python/models
 
 # media files
 *.mp4
+
+# tensorflow library files
+cpp/cpp_tflite/include/tensorflow
+cpp/cpp_tflite/include/third_party
