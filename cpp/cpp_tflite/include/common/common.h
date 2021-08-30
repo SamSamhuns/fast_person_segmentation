@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include "tensorflow/lite/interpreter.h"
 
-#define TFLITE_MINIMAL_CHECK(x)                                                \
-  if (!(x)) {                                                                  \
-    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__);                   \
-    exit(1);                                                                   \
+#define CHECK_FOR_ERROR(x)                                                \
+  if (!(x)) {                                                             \
+    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__);              \
+    exit(1);                                                              \
   }
 
 struct Settings {
@@ -35,7 +35,7 @@ struct IOShape {
 
 Settings get_settings(std::string model_path);
 std::string get_basename(std::string full_path);
-void print_model_struct(std::unique_ptr<tflite::Interpreter>& interpreter);
+void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter);
 std::tuple<IOShape, IOShape>get_input_output_dims(Settings &settings, std::unique_ptr<tflite::Interpreter> &interpreter);
 
 #endif

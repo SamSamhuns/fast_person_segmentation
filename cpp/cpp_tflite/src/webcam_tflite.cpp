@@ -19,45 +19,46 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
-int img_mode(Settings &settings, char *img_path, char *bg_path);
-int cam_mode(Settings &settings, char *vid_path, char *bg_path);
+int img_mode(Settings &settings, char *img_path, char *bg_path,
+             char *save_path);
+int cam_mode(Settings &settings, char *vid_path, char *bg_path,
+             char *save_path);
 
 int main(int argc, char *argv[]) {
-  // run program like
-  // for image:  ./example img m(1/2/3/4) path_to_img
-  // for webcam: ./example cam m(1/2/3/4)
-  // 1st arg is mode, 2nd arg is model_path
   std::cout << argc << '\n';
-  if (argc == 5 && strcmp(argv[1], "img") == 0) {
+  if (argc == 6 && strcmp(argv[1], "img") == 0) {
     Settings settings = get_settings(argv[2]);
-    img_mode(settings, argv[3], argv[4]);
+    img_mode(settings, argv[3], argv[4], argv[5]);
     return 0;
-  } else if (argc == 5 && strcmp(argv[1], "cam") == 0) {
+  } else if (argc == 6 && strcmp(argv[1], "cam") == 0) {
     Settings settings = get_settings(argv[2]);
-    cam_mode(settings, argv[3], argv[4]);
+    cam_mode(settings, argv[3], argv[4], argv[5]);
     return 0;
   }
-  std::cout << "Invalid number of args. FMT is ./example img "
-               "<tflite_model_path> <img_path> or "
-               "./example cam <tflite_model_path>"
-            << std::endl;
+  std::cout
+      << "Invalid number of args. FMT is "
+         "./tflite_seg img <model_path> <img_path> <bg_image_path> <save_path> "
+         "or "
+         "./tflite_seg cam <model_path> <vid_path> <bg_image_path> <save_path>"
+      << std::endl;
   return 1;
 }
 
-int img_mode(Settings &settings, char *img_path, char *bg_path) {
+int img_mode(Settings &settings, char *img_path, char *bg_path,
+             char *save_path) {
   std::cout << "Starting image inference on " << img_path << "\n";
   const char *model_filepath = settings.model_path.c_str();
 
   // load model and get tflite interpreter
   std::unique_ptr<tflite::FlatBufferModel> model;
   model = tflite::FlatBufferModel::BuildFromFile(model_filepath);
-  TFLITE_MINIMAL_CHECK(model != nullptr);
+  CHECK_FOR_ERROR(model != nullptr);
 
   // Build the interpreter with the InterpreterBuilder
   std::unique_ptr<tflite::Interpreter> interpreter;
   tflite::ops::builtin::BuiltinOpResolver resolver;
   tflite::InterpreterBuilder(*model, resolver)(&interpreter);
-  TFLITE_MINIMAL_CHECK(interpreter != nullptr);
+  CHECK_FOR_ERROR(interpreter != nullptr);
 
   interpreter->SetAllowFp16PrecisionForFp32(settings.allow_fp16);
   if (settings.number_of_threads != -1) {
@@ -66,10 +67,9 @@ int img_mode(Settings &settings, char *img_path, char *bg_path) {
   print_model_struct(interpreter);
 
   // get input/output shapes
-  IOShape input_shape;
-  IOShape output_shape;
-  std::tie(input_shape, output_shape) =
-      get_input_output_dims(settings, interpreter);
+  IOShape in_shape;
+  IOShape out_shape;
+  std::tie(in_shape, out_shape) = get_input_output_dims(settings, interpreter);
 
   // load iamge with opencv and populate tflite input
   // display window name
@@ -79,7 +79,7 @@ int img_mode(Settings &settings, char *img_path, char *bg_path) {
   cv::Mat img, inp, convMat, bgcrop;
   TfLiteTensor *output_mask = nullptr;
   // Allocate tensor buffers
-  TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
+  CHECK_FOR_ERROR(interpreter->AllocateTensors() == kTfLiteOk);
 
   // cap min and max display heights
   int disp_h = std::min(720, settings.disp_h);
@@ -87,7 +87,7 @@ int img_mode(Settings &settings, char *img_path, char *bg_path) {
 
   // read input image and preprocess for inference
   img = cv::imread(img_path, cv::IMREAD_COLOR);
-  cv::resize(img, inp, cv::Size(input_shape.width, input_shape.height),
+  cv::resize(img, inp, cv::Size(in_shape.width, in_shape.height),
              cv::INTER_LINEAR);
   // Scale image to range 0-1 and convert dtype to float 32
   inp.convertTo(inp, CV_32FC3, 1.f / 255);
@@ -116,19 +116,19 @@ int img_mode(Settings &settings, char *img_path, char *bg_path) {
   //   interpreter->outputs()[output_idx]
 
   // copy image to input as input tensor
-  memcpy(interpreter->typed_input_tensor<float>(input_shape.index), inp.data,
+  memcpy(interpreter->typed_input_tensor<float>(in_shape.index), inp.data,
          inp.total() * inp.elemSize());
 
   // Run inference
-  TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
+  CHECK_FOR_ERROR(interpreter->Invoke() == kTfLiteOk);
   printf("Tflite Inference Complete\n");
 
   // Read output buffers
-  output_mask = interpreter->tensor(interpreter->outputs()[output_shape.index]);
+  output_mask = interpreter->tensor(interpreter->outputs()[out_shape.index]);
   float *output_data_ptr = output_mask->data.f;
 
   // convert from float* to cv::mat
-  cv::Mat two_channel(output_shape.height, output_shape.width, CV_32FC2,
+  cv::Mat two_channel(out_shape.height, out_shape.width, CV_32FC2,
                       output_data_ptr);
 
   // 0=bg channel, 1=fg channel
@@ -154,12 +154,18 @@ int img_mode(Settings &settings, char *img_path, char *bg_path) {
   cv::add(convMat, bg_mask, convMat);
 
   cv::imshow(disp_window_name, convMat);
+  // save output save_path if provided
+  if (save_path[0] != '0') {
+    cv::imwrite(save_path, convMat);
+  }
+
   cv::waitKey(0);
 
   return 0;
 }
 
-int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
+int cam_mode(Settings &settings, char *vid_path, char *bg_path,
+             char *save_path) {
   std::cout << "Initializing video inference\n";
   const char *model_filepath = settings.model_path.c_str();
 
@@ -170,13 +176,13 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
   // load model and get tflite interpreter
   std::unique_ptr<tflite::FlatBufferModel> model;
   model = tflite::FlatBufferModel::BuildFromFile(model_filepath);
-  TFLITE_MINIMAL_CHECK(model != nullptr);
+  CHECK_FOR_ERROR(model != nullptr);
 
   // Build the interpreter with the InterpreterBuilder
   std::unique_ptr<tflite::Interpreter> interpreter;
   tflite::ops::builtin::BuiltinOpResolver resolver;
   tflite::InterpreterBuilder(*model, resolver)(&interpreter);
-  TFLITE_MINIMAL_CHECK(interpreter != nullptr);
+  CHECK_FOR_ERROR(interpreter != nullptr);
 
   interpreter->SetAllowFp16PrecisionForFp32(settings.allow_fp16);
   if (settings.number_of_threads != -1) {
@@ -185,10 +191,9 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
   print_model_struct(interpreter);
 
   // get input/output shapes
-  IOShape input_shape;
-  IOShape output_shape;
-  std::tie(input_shape, output_shape) =
-      get_input_output_dims(settings, interpreter);
+  IOShape in_shape;
+  IOShape out_shape;
+  std::tie(in_shape, out_shape) = get_input_output_dims(settings, interpreter);
 
   // Create a window for display
   std::string disp_window_name = get_basename(settings.model_path);
@@ -207,7 +212,7 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
   cv::Mat frame, orig_frame, convMat;
   TfLiteTensor *output_mask = nullptr;
   // Allocate tensor buffers
-  TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
+  CHECK_FOR_ERROR(interpreter->AllocateTensors() == kTfLiteOk);
 
   // diff var to hold inference time in ms
   float diff = 1000.;
@@ -217,6 +222,14 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
   cv::Mat element = cv::getStructuringElement(
       cv::MORPH_ELLIPSE, cv::Size(2 * kern_size + 1, 2 * kern_size + 1),
       cv::Point(kern_size, kern_size));
+
+  // set up opencv video writer if savepath is provided
+  cv::VideoWriter video;
+  if (save_path[0] != '0') {
+    int fps = 25;
+    video.open(save_path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps,
+               cv::Size(disp_w, disp_h));
+  }
 
   // load bg image for replacement
   cv::Mat bg, bg_mask;
@@ -233,29 +246,26 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
     auto start = std::chrono::steady_clock::now();
     // Read frames from camera
     cap >> frame;
-    if (frame.empty()) {
-      cv::waitKey();
+    if (frame.empty() || cv::waitKey(1) == 113)
       break;
-    }
     orig_frame = frame.clone();
-    cv::resize(frame, frame, cv::Size(input_shape.width, input_shape.height),
+    cv::resize(frame, frame, cv::Size(in_shape.width, in_shape.height),
                cv::INTER_AREA);
 
     // Scale image to range 0-1 and convert dtype to float 32
     frame.convertTo(frame, CV_32FC3, 1.f / 255);
 
     // copy image to input as input tensor
-    memcpy(interpreter->typed_input_tensor<float>(input_shape.index),
-           frame.data, frame.total() * frame.elemSize());
+    memcpy(interpreter->typed_input_tensor<float>(in_shape.index), frame.data,
+           frame.total() * frame.elemSize());
 
     // Run inference
     interpreter->Invoke();
     // Read output buffers
-    output_mask =
-        interpreter->tensor(interpreter->outputs()[output_shape.index]);
+    output_mask = interpreter->tensor(interpreter->outputs()[out_shape.index]);
     float *output_data_ptr = output_mask->data.f;
     // convert from float* to cv::mat
-    cv::Mat two_channel(output_shape.height, output_shape.width, CV_32FC2,
+    cv::Mat two_channel(out_shape.height, out_shape.width, CV_32FC2,
                         output_data_ptr);
 
     // 0=bg channel, 1=fg channel
@@ -286,9 +296,17 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
     cv::putText(convMat, label, cv::Point(0, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                 cv::Scalar(0, 255, 0));
     cv::imshow(disp_window_name, convMat);
+
+    if (save_path[0] != '0') {
+      std::cout << "wirting" << '\n';
+      video.write(convMat);
+    }
     auto end = std::chrono::steady_clock::now();
     // Store the time difference between start and end
     diff = std::chrono::duration<double, std::milli>(end - start).count();
   }
+  video.release();
+  cap.release();
+  cv::destroyAllWindows();
   return 0;
 }
