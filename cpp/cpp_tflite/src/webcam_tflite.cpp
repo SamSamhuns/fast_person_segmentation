@@ -19,21 +19,22 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
-int img_mode(Settings &settings, char *img_path);
-int cam_mode(Settings &settings, char *vid_path);
+int img_mode(Settings &settings, char *img_path, char *bg_path);
+int cam_mode(Settings &settings, char *vid_path, char *bg_path);
 
 int main(int argc, char *argv[]) {
   // run program like
   // for image:  ./example img m(1/2/3/4) path_to_img
   // for webcam: ./example cam m(1/2/3/4)
   // 1st arg is mode, 2nd arg is model_path
-  if (argc == 4 && strcmp(argv[1], "img") == 0) {
+  std::cout << argc << '\n';
+  if (argc == 5 && strcmp(argv[1], "img") == 0) {
     Settings settings = get_settings(argv[2]);
-    img_mode(settings, argv[3]);
+    img_mode(settings, argv[3], argv[4]);
     return 0;
-  } else if (argc == 4 && strcmp(argv[1], "cam") == 0) {
+  } else if (argc == 5 && strcmp(argv[1], "cam") == 0) {
     Settings settings = get_settings(argv[2]);
-    cam_mode(settings, argv[3]);
+    cam_mode(settings, argv[3], argv[4]);
     return 0;
   }
   std::cout << "Invalid number of args. FMT is ./example img "
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]) {
   return 1;
 }
 
-int img_mode(Settings &settings, char *img_path) {
+int img_mode(Settings &settings, char *img_path, char *bg_path) {
   std::cout << "Starting image inference on " << img_path << "\n";
   const char *model_filepath = settings.model_path.c_str();
 
@@ -77,17 +78,36 @@ int img_mode(Settings &settings, char *img_path) {
   // declare mat vars & input vector
   cv::Mat img, inp, convMat, bgcrop;
   TfLiteTensor *output_mask = nullptr;
+  // Allocate tensor buffers
+  TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
+
+  // cap min and max display heights
+  int disp_h = std::min(720, settings.disp_h);
+  int disp_w = std::min(1200, settings.disp_w);
+
+  // read input image and preprocess for inference
   img = cv::imread(img_path, cv::IMREAD_COLOR);
   cv::resize(img, inp, cv::Size(input_shape.width, input_shape.height),
              cv::INTER_LINEAR);
   // Scale image to range 0-1 and convert dtype to float 32
   inp.convertTo(inp, CV_32FC3, 1.f / 255);
 
-  // Allocate tensor buffers
-  TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
-  // printf("=== Pre-invoke Interpreter State ===\n");
-  // if (settings.verbose)
-  //   tflite::PrintInterpreterState(interpreter.get());
+  // for removing border feathers
+  int kern_size = 1;
+  // MORPH_RECT, MORPH_ELLIPSE
+  cv::Mat element = cv::getStructuringElement(
+      cv::MORPH_ELLIPSE, cv::Size(2 * kern_size + 1, 2 * kern_size + 1),
+      cv::Point(kern_size, kern_size));
+
+  // load bg image for replacement
+  cv::Mat bg, bg_mask;
+  if (bg_path[0] == '0') { // if no bg img path provided, use a zero image
+    bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
+  } else {
+    bg = cv::imread(bg_path); // if bg img path provided, load as BGR
+    cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
+    bg.convertTo(bg, CV_32FC3);
+  }
 
   // https://stackoverflow.com/questions/59424842
   // for input and output buffers:
@@ -102,9 +122,6 @@ int img_mode(Settings &settings, char *img_path) {
   // Run inference
   TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
   printf("Tflite Inference Complete\n");
-  // printf("=== Post-invoke Interpreter State ===\n");
-  // if (settings.verbose)
-  //   tflite::PrintInterpreterState(interpreter.get());
 
   // Read output buffers
   output_mask = interpreter->tensor(interpreter->outputs()[output_shape.index]);
@@ -115,18 +132,26 @@ int img_mode(Settings &settings, char *img_path) {
                       output_data_ptr);
 
   // 0=bg channel, 1=fg channel
-  cv::extractChannel(two_channel, convMat, 1);
+  cv::extractChannel(two_channel, convMat, 0);
 
   // post processing
-  cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
+  cv::dilate(convMat, convMat, element);
   cv::GaussianBlur(convMat, convMat, cv::Size(3, 3), 3);
-  cv::resize(convMat, convMat, cv::Size(1200, 720), cv::INTER_LINEAR);
-  cv::resize(img, img, cv::Size(1200, 720), cv::INTER_LINEAR);
+  cv::resize(convMat, convMat, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
+
+  cv::threshold(convMat, convMat, settings.threshold, 1.,
+                cv::THRESH_BINARY_INV);
+  cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
+  cv::subtract(bg, convMat * 255.0, bg_mask);
+
+  cv::resize(img, img, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
   img.convertTo(img, CV_32FC3);
-  convMat.setTo(1.0, convMat >= settings.threshold);
-  convMat.setTo(0.0, convMat < settings.threshold);
+
   cv::multiply(convMat, img, convMat); // mix orig img and generated mask
+
   convMat.convertTo(convMat, CV_8UC3);
+  bg_mask.convertTo(bg_mask, CV_8UC3);
+  cv::add(convMat, bg_mask, convMat);
 
   cv::imshow(disp_window_name, convMat);
   cv::waitKey(0);
@@ -134,9 +159,13 @@ int img_mode(Settings &settings, char *img_path) {
   return 0;
 }
 
-int cam_mode(Settings &settings, char *vid_path) {
+int cam_mode(Settings &settings, char *vid_path, char *bg_path) {
   std::cout << "Initializing video inference\n";
   const char *model_filepath = settings.model_path.c_str();
+
+  // cap min and max display heights
+  int disp_h = std::min(720, settings.disp_h);
+  int disp_w = std::min(1000, settings.disp_w);
 
   // load model and get tflite interpreter
   std::unique_ptr<tflite::FlatBufferModel> model;
@@ -169,16 +198,35 @@ int cam_mode(Settings &settings, char *vid_path) {
   cv::VideoCapture cap;
   if (vid_path[0] == '0') { // webcam mode
     cap.open(0);
-  }
-  else {
-    cap.open(vid_path);     // video loaded from path
+  } else {
+    cap.open(vid_path); // video loaded from path
   }
 
   // declare mat vars & input vector
+  cv::Mat outImage = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
   cv::Mat frame, orig_frame, convMat;
   TfLiteTensor *output_mask = nullptr;
   // Allocate tensor buffers
   TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
+
+  // diff var to hold inference time in ms
+  float diff = 1000.;
+  // for removing border feathers
+  int kern_size = 1;
+  // MORPH_RECT, MORPH_ELLIPSE
+  cv::Mat element = cv::getStructuringElement(
+      cv::MORPH_ELLIPSE, cv::Size(2 * kern_size + 1, 2 * kern_size + 1),
+      cv::Point(kern_size, kern_size));
+
+  // load bg image for replacement
+  cv::Mat bg, bg_mask;
+  if (bg_path[0] == '0') { // if no bg img path provided, use a zero image
+    bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
+  } else {
+    bg = cv::imread(bg_path); // if bg img path provided, load as BGR
+    cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
+    bg.convertTo(bg, CV_32FC3);
+  }
 
   // Process video frames
   while (cv::waitKey(1) < 0) {
@@ -197,43 +245,50 @@ int cam_mode(Settings &settings, char *vid_path) {
     frame.convertTo(frame, CV_32FC3, 1.f / 255);
 
     // copy image to input as input tensor
-    memcpy(interpreter->typed_input_tensor<float>(input_shape.index), frame.data,
-           frame.total() * frame.elemSize());
+    memcpy(interpreter->typed_input_tensor<float>(input_shape.index),
+           frame.data, frame.total() * frame.elemSize());
 
     // Run inference
     interpreter->Invoke();
-
     // Read output buffers
-    output_mask = interpreter->tensor(interpreter->outputs()[output_shape.index]);
+    output_mask =
+        interpreter->tensor(interpreter->outputs()[output_shape.index]);
     float *output_data_ptr = output_mask->data.f;
-
     // convert from float* to cv::mat
     cv::Mat two_channel(output_shape.height, output_shape.width, CV_32FC2,
                         output_data_ptr);
 
     // 0=bg channel, 1=fg channel
-    cv::extractChannel(two_channel, convMat, 1);
+    cv::extractChannel(two_channel, convMat, 0);
 
     // post processing
-    cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
-    cv::resize(convMat, convMat, cv::Size(1000, 720), cv::INTER_LINEAR);
-    cv::resize(orig_frame, orig_frame, cv::Size(1000, 720), cv::INTER_LINEAR);
-
-    orig_frame.convertTo(orig_frame, CV_32FC3);
+    // removing edge feathering, smoothen boundaries, resize to disp dims
+    cv::dilate(convMat, convMat, element);
     cv::GaussianBlur(convMat, convMat, cv::Size(3, 3), 3);
-    convMat.setTo(1.0, convMat >= settings.threshold);
-    convMat.setTo(0.0, convMat < settings.threshold);
-    cv::multiply(convMat, orig_frame, convMat); // mix orig img and mask
-    convMat.convertTo(convMat, CV_8UC3);
+    cv::resize(convMat, convMat, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
 
-    auto end = std::chrono::steady_clock::now();
-    // Store the time difference between start and end
-    auto diff = std::chrono::duration<double, std::milli>(end - start).count();
+    cv::threshold(convMat, convMat, settings.threshold, 1.,
+                  cv::THRESH_BINARY_INV);
+    cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
+
+    cv::subtract(bg, convMat * 255.0, bg_mask);
+    cv::resize(orig_frame, orig_frame, cv::Size(disp_w, disp_h),
+               cv::INTER_LINEAR);
+    orig_frame.convertTo(orig_frame, CV_32FC3);
+
+    cv::multiply(convMat, orig_frame, convMat); // mix orig img and mask
+    bg_mask.convertTo(bg_mask, CV_8UC3);
+    convMat.convertTo(convMat, CV_8UC3);
+    cv::add(convMat, bg_mask, convMat);
+
     cv::String label =
         cv::format("FPS: %.2f: Inference time %.2f ", 1000.0 / diff, diff);
     cv::putText(convMat, label, cv::Point(0, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                 cv::Scalar(0, 255, 0));
     cv::imshow(disp_window_name, convMat);
+    auto end = std::chrono::steady_clock::now();
+    // Store the time difference between start and end
+    diff = std::chrono::duration<double, std::milli>(end - start).count();
   }
   return 0;
 }

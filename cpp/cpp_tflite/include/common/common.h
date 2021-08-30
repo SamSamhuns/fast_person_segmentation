@@ -13,7 +13,9 @@
 
 struct Settings {
   std::string model_path = "";
-  float threshold = 0.63;
+  float threshold = 0.8;
+  int disp_w = 1200;
+  int disp_h = 720;
   bool verbose = true;
   bool accel = false;
   bool allow_fp16 = false;
