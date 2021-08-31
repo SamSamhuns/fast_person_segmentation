@@ -36,8 +36,8 @@ struct IOShape {
   int channels;
 };
 
-std::tuple<char *, char *, char *, char *, char *> parse_args(int argc, char **argv);
-Settings get_settings(std::string model_path, char *in_media_path, char *bg_path, char *save_path);
+std::tuple<char *, char *, char *, char *, char *, bool> parse_args(int argc, char **argv);
+Settings get_settings(std::string model_path, char *in_media_path, char *bg_path, char *save_path, bool verbose);
 std::string get_basename(std::string full_path);
 void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter);
 std::tuple<IOShape, IOShape>get_input_output_dims(Settings &settings, std::unique_ptr<tflite::Interpreter> &interpreter);

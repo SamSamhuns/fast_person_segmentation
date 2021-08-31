@@ -25,17 +25,18 @@ int vid_mode(Settings &settings);
 int main(int argc, char *argv[]) {
   // parse args and fill vars
   // in_media_path, bg_image_path and save_path can be nullptr pointers
-  char *mode, *tflite_model_path, *in_media_path, *bg_path, *save_path;
-  std::tie(mode, tflite_model_path, in_media_path, bg_path, save_path) =
+  char *mode, *model_path, *in_media_path, *bg_path, *save_path;
+  bool verbose;
+  std::tie(mode, model_path, in_media_path, bg_path, save_path, verbose) =
       parse_args(argc, argv);
 
   Settings settings =
-      get_settings(tflite_model_path, in_media_path, bg_path, save_path);
+      get_settings(model_path, in_media_path, bg_path, save_path, verbose);
 
   if (strcmp(mode, "img") == 0) {
     if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) {
       std::cout << "ERROR: Input image path is needed. Use -h for help\n";
-      exit(-1);
+      exit(1);
     }
     img_mode(settings);
   } else if (strcmp(mode, "vid") == 0) {

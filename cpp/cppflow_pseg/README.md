@@ -44,10 +44,14 @@ mkdir build
 cd build
 cmake ..
 make
-# for image segmentation
-./example img m1 path_to_img # ./example img m(1/2/3/4/5/6) path_to_img
-# for webcam segmentation with opencv
-./example cam m1             # ./example cam m(1/2/3/4/5/6)            
+# image segmentation & saving in save_path
+./example -m img -t m1 -i <img_path> -s <save_path> # model types are m(1/2/3/4/5/6)
+# video segmentation with opencv  & saving in save_path
+./example -m vid -t m1 -i <vid_path> -s <save_path> # model types are m(1/2/3/4/5/6)     
+# webcam segmentation with opencv & saving in save_path
+./example -m vid -t m1 -s <save_path>               # model types are m(1/2/3/4/5/6)
+# webcam segmentation with opencv  without saving
+./example -m vid -t m1                              # model types are m(1/2/3/4/5/6)
 ```
 
 ## Usage

@@ -21,13 +21,14 @@ void print_help() {
          "--tflite_model_path/-t <path>: Path to tflite model\n"
          "--in_media_path/-i <path>:     Path to fg img/vid given mode\n"
          "--bg_image_path/-b <path>:     Path to bg image."
-         "If absent, use a dark bg\n"
+         "If absent, use a black background\n"
          "--save_path/-s <path>:         Path to save inference image/video."
          "If absent, no results saved\n"
+         "--verbose/--v:                 Verbose mode if flag specified\n"
          "--help/-h:                     Show help\n";
 }
 
-std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
+std::tuple<char *, char *, char *, char *, char *, bool> parse_args(int argc,
                                                               char **argv) {
   // init return char ptr vars to nullptr for initialization check later
   char *mode = nullptr;
@@ -35,6 +36,7 @@ std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
   char *in_media_path = nullptr;
   char *bg_image_path = nullptr;
   char *save_path = nullptr;
+  bool verbose = false;
 
   const char *const short_opts = "m:t:i:b:s:h";
   const option long_opts[] = {
@@ -43,6 +45,7 @@ std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
       {"in_media_path", required_argument, nullptr, 'i'},
       {"bg_image_path", required_argument, nullptr, 'b'},
       {"save_path", required_argument, nullptr, 's'},
+      {"verbose", no_argument, nullptr, 'v'},
       {"help", no_argument, nullptr, 'h'},
       {nullptr, no_argument, nullptr, 0}};
 
@@ -72,6 +75,10 @@ std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
       save_path = optarg;
       std::cout << "Media save path: " << save_path << "\n";
       break;
+    case 'v':
+      verbose = true;
+      std::cout << "Verbose mode: " << verbose << "\n";
+      break;
 
     case 'h': // -h or --help
     case '?': // Unrecognized option
@@ -91,7 +98,7 @@ std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
     exit(-1);
   }
   return std::make_tuple(mode, tflite_model_path, in_media_path, bg_image_path,
-                         save_path);
+                         save_path, verbose);
 }
 
 std::string get_basename(std::string full_path) {
@@ -103,17 +110,24 @@ std::string get_basename(std::string full_path) {
   return str;
 }
 
-bool does_file_exist(const char* fpath) {
+bool does_file_exist(const char *fpath) {
   // if check if a file exists in fpath
   struct stat buffer;
   return (stat(fpath, &buffer) == 0);
 }
 
 Settings get_settings(std::string model_path, char *in_media_path,
-                      char *bg_path, char *save_path) {
+                      char *bg_path, char *save_path, bool verbose) {
   Settings s;
+  // if the paths are not NULL and are valid
   if (!does_file_exist(model_path.c_str())) {
-    std::cout << "Invalid tflite model path: " << model_path << '\n';
+    std::cout << "ERROR: Invalid tflite model path: " << model_path << '\n';
+    exit(1);
+  } else if (in_media_path != nullptr && !does_file_exist(in_media_path)) {
+    std::cout << "ERROR: Invalid in media path: " << in_media_path << '\n';
+    exit(1);
+  } else if (bg_path != nullptr && !does_file_exist(bg_path)) {
+    std::cout << "ERROR: Invalid bg image path: " << bg_path << '\n';
     exit(1);
   }
 
@@ -121,11 +135,12 @@ Settings get_settings(std::string model_path, char *in_media_path,
   s.bg_path = bg_path;
   s.save_path = save_path;
   s.model_path = model_path;
+  s.verbose = verbose;
   return s;
 }
 
 void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter) {
-  std::cout << "Printing model layer name and shapes:" << std::endl;
+  std::cout << "INFO: Printing model layer name and shapes:" << std::endl;
   int t_size = interpreter->tensors_size();
   for (int i = 0; i < t_size; i++) {
     if (interpreter->tensor(i)->name)
@@ -160,15 +175,15 @@ get_input_output_dims(Settings &settings,
   const std::vector<int> outputs = interpreter->outputs();
 
   if (settings.verbose) {
-    printf("##### Printing INPUT/OUTPUT NAME and SHAPES #####\n");
-    printf("Input shape: [%d,%d,%d,%d]\n", in_bsize, in_height, in_width,
+    printf("INFO: Printing Model input/output names and shapes\n");
+    printf("\tInput shape: [%d,%d,%d,%d]\n", in_bsize, in_height, in_width,
            in_channels);
-    std::cout << "input(0) name: " << interpreter->GetInputName(0) << "\n";
-    std::cout << "number of inputs: " << inputs.size() << "\n";
-    printf("Output shape: [%d,%d,%d,%d]\n", out_bsize, out_height, out_width,
+    std::cout << "\tinput(0) name: " << interpreter->GetInputName(0) << "\n";
+    std::cout << "\tnumber of inputs: " << inputs.size() << "\n";
+    printf("\tOutput shape: [%d,%d,%d,%d]\n", out_bsize, out_height, out_width,
            out_channels);
-    std::cout << "output(0) name: " << interpreter->GetOutputName(0) << "\n";
-    std::cout << "number of outputs: " << outputs.size() << "\n";
+    std::cout << "\toutput(0) name: " << interpreter->GetOutputName(0) << "\n";
+    std::cout << "\tnumber of outputs: " << outputs.size() << "\n";
   }
 
   IOShape input_shape;
