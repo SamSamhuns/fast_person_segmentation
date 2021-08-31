@@ -19,35 +19,40 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
-int img_mode(Settings &settings, char *img_path, char *bg_path,
-             char *save_path);
-int cam_mode(Settings &settings, char *vid_path, char *bg_path,
-             char *save_path);
+int img_mode(Settings &settings);
+int vid_mode(Settings &settings);
 
 int main(int argc, char *argv[]) {
-  std::cout << argc << '\n';
-  if (argc == 6 && strcmp(argv[1], "img") == 0) {
-    Settings settings = get_settings(argv[2]);
-    img_mode(settings, argv[3], argv[4], argv[5]);
-    return 0;
-  } else if (argc == 6 && strcmp(argv[1], "cam") == 0) {
-    Settings settings = get_settings(argv[2]);
-    cam_mode(settings, argv[3], argv[4], argv[5]);
-    return 0;
+  // parse args and fill vars
+  // in_media_path, bg_image_path and save_path can be nullptr pointers
+  char *mode, *tflite_model_path, *in_media_path, *bg_path, *save_path;
+  std::tie(mode, tflite_model_path, in_media_path, bg_path, save_path) =
+      parse_args(argc, argv);
+
+  Settings settings =
+      get_settings(tflite_model_path, in_media_path, bg_path, save_path);
+
+  if (strcmp(mode, "img") == 0) {
+    if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) {
+      std::cout << "ERROR: Input image path is needed. Use -h for help\n";
+      exit(-1);
+    }
+    img_mode(settings);
+  } else if (strcmp(mode, "vid") == 0) {
+    vid_mode(settings);
   }
-  std::cout
-      << "Invalid number of args. FMT is "
-         "./tflite_seg img <model_path> <img_path> <bg_image_path> <save_path> "
-         "or "
-         "./tflite_seg cam <model_path> <vid_path> <bg_image_path> <save_path>"
-      << std::endl;
-  return 1;
+  return 0;
 }
 
-int img_mode(Settings &settings, char *img_path, char *bg_path,
-             char *save_path) {
-  std::cout << "Starting image inference on " << img_path << "\n";
+int img_mode(Settings &settings) {
   const char *model_filepath = settings.model_path.c_str();
+  char *in_media_path = settings.in_media_path;
+  char *bg_path = settings.bg_path;
+  char *save_path = settings.save_path;
+
+  // cap min and max display heights
+  int disp_h = std::min(720, settings.disp_h);
+  int disp_w = std::min(1200, settings.disp_w);
 
   // load model and get tflite interpreter
   std::unique_ptr<tflite::FlatBufferModel> model;
@@ -64,14 +69,15 @@ int img_mode(Settings &settings, char *img_path, char *bg_path,
   if (settings.number_of_threads != -1) {
     interpreter->SetNumThreads(settings.number_of_threads);
   }
-  print_model_struct(interpreter);
+  if (settings.verbose)
+    print_model_struct(interpreter);
 
   // get input/output shapes
   IOShape in_shape;
   IOShape out_shape;
   std::tie(in_shape, out_shape) = get_input_output_dims(settings, interpreter);
 
-  // load iamge with opencv and populate tflite input
+  // load image with opencv and populate tflite input
   // display window name
   std::string disp_window_name = get_basename(settings.model_path);
 
@@ -80,17 +86,6 @@ int img_mode(Settings &settings, char *img_path, char *bg_path,
   TfLiteTensor *output_mask = nullptr;
   // Allocate tensor buffers
   CHECK_FOR_ERROR(interpreter->AllocateTensors() == kTfLiteOk);
-
-  // cap min and max display heights
-  int disp_h = std::min(720, settings.disp_h);
-  int disp_w = std::min(1200, settings.disp_w);
-
-  // read input image and preprocess for inference
-  img = cv::imread(img_path, cv::IMREAD_COLOR);
-  cv::resize(img, inp, cv::Size(in_shape.width, in_shape.height),
-             cv::INTER_LINEAR);
-  // Scale image to range 0-1 and convert dtype to float 32
-  inp.convertTo(inp, CV_32FC3, 1.f / 255);
 
   // for removing border feathers
   int kern_size = 1;
@@ -101,13 +96,21 @@ int img_mode(Settings &settings, char *img_path, char *bg_path,
 
   // load bg image for replacement
   cv::Mat bg, bg_mask;
-  if (bg_path[0] == '0') { // if no bg img path provided, use a zero image
+  if ((bg_path == nullptr) ||
+      (bg_path[0] == '\0')) { // if no bg img path provided, use a zero image
     bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
   } else {
     bg = cv::imread(bg_path); // if bg img path provided, load as BGR
     cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
     bg.convertTo(bg, CV_32FC3);
   }
+
+  // read input image and preprocess for inference
+  img = cv::imread(in_media_path, cv::IMREAD_COLOR);
+  cv::resize(img, inp, cv::Size(in_shape.width, in_shape.height),
+             cv::INTER_LINEAR);
+  // Scale image to range 0-1 and convert dtype to float 32
+  inp.convertTo(inp, CV_32FC3, 1.f / 255);
 
   // https://stackoverflow.com/questions/59424842
   // for input and output buffers:
@@ -155,19 +158,18 @@ int img_mode(Settings &settings, char *img_path, char *bg_path,
 
   cv::imshow(disp_window_name, convMat);
   // save output save_path if provided
-  if (save_path[0] != '0') {
+  if ((save_path != nullptr) && (save_path[0] != '\0')) {
     cv::imwrite(save_path, convMat);
   }
-
   cv::waitKey(0);
-
   return 0;
 }
 
-int cam_mode(Settings &settings, char *vid_path, char *bg_path,
-             char *save_path) {
-  std::cout << "Initializing video inference\n";
+int vid_mode(Settings &settings) {
   const char *model_filepath = settings.model_path.c_str();
+  char *in_media_path = settings.in_media_path;
+  char *bg_path = settings.bg_path;
+  char *save_path = settings.save_path;
 
   // cap min and max display heights
   int disp_h = std::min(720, settings.disp_h);
@@ -188,7 +190,8 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
   if (settings.number_of_threads != -1) {
     interpreter->SetNumThreads(settings.number_of_threads);
   }
-  print_model_struct(interpreter);
+  if (settings.verbose)
+    print_model_struct(interpreter);
 
   // get input/output shapes
   IOShape in_shape;
@@ -201,10 +204,10 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
 
   // Capture frames from video
   cv::VideoCapture cap;
-  if (vid_path[0] == '0') { // webcam mode
+  if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) { // webcam mode
     cap.open(0);
   } else {
-    cap.open(vid_path); // video loaded from path
+    cap.open(in_media_path); // video loaded from path
   }
 
   // declare mat vars & input vector
@@ -223,9 +226,9 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
       cv::MORPH_ELLIPSE, cv::Size(2 * kern_size + 1, 2 * kern_size + 1),
       cv::Point(kern_size, kern_size));
 
-  // set up opencv video writer if savepath is provided
+  // set up opencv video writer if save_path is provided
   cv::VideoWriter video;
-  if (save_path[0] != '0') {
+  if ((save_path != nullptr) && (save_path[0] != '\0')) {
     int fps = 25;
     video.open(save_path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps,
                cv::Size(disp_w, disp_h));
@@ -233,7 +236,8 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
 
   // load bg image for replacement
   cv::Mat bg, bg_mask;
-  if (bg_path[0] == '0') { // if no bg img path provided, use a zero image
+  if ((bg_path == nullptr) ||
+      (bg_path[0] == '\0')) { // if no bg img path provided, use a zero image
     bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
   } else {
     bg = cv::imread(bg_path); // if bg img path provided, load as BGR
@@ -241,12 +245,12 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
     bg.convertTo(bg, CV_32FC3);
   }
 
-  // Process video frames
-  while (cv::waitKey(1) < 0) {
+  // Process video frames till video ends or 'q' is pressed
+  while (cv::waitKey(1) != 113) {
     auto start = std::chrono::steady_clock::now();
     // Read frames from camera
     cap >> frame;
-    if (frame.empty() || cv::waitKey(1) == 113)
+    if (frame.empty())
       break;
     orig_frame = frame.clone();
     cv::resize(frame, frame, cv::Size(in_shape.width, in_shape.height),
@@ -297,10 +301,8 @@ int cam_mode(Settings &settings, char *vid_path, char *bg_path,
                 cv::Scalar(0, 255, 0));
     cv::imshow(disp_window_name, convMat);
 
-    if (save_path[0] != '0') {
-      std::cout << "wirting" << '\n';
+    if ((save_path != nullptr) && (save_path[0] != '\0'))
       video.write(convMat);
-    }
     auto end = std::chrono::steady_clock::now();
     // Store the time difference between start and end
     diff = std::chrono::duration<double, std::milli>(end - start).count();

@@ -13,10 +13,13 @@
 
 struct Settings {
   std::string model_path = "";
+  char* in_media_path = NULL;
+  char* bg_path = NULL;
+  char* save_path = NULL;
   float threshold = 0.8;
   int disp_w = 1200;
   int disp_h = 720;
-  bool verbose = true;
+  bool verbose = false;
   bool accel = false;
   bool allow_fp16 = false;
   bool gl_backend = false;
@@ -33,7 +36,8 @@ struct IOShape {
   int channels;
 };
 
-Settings get_settings(std::string model_path);
+std::tuple<char *, char *, char *, char *, char *> parse_args(int argc, char **argv);
+Settings get_settings(std::string model_path, char *in_media_path, char *bg_path, char *save_path);
 std::string get_basename(std::string full_path);
 void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter);
 std::tuple<IOShape, IOShape>get_input_output_dims(Settings &settings, std::unique_ptr<tflite::Interpreter> &interpreter);

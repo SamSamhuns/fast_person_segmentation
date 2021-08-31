@@ -33,6 +33,14 @@ $ ./tflite_seg img m1 <PATH_TO_IMG>
 $ ./tflite_seg cam m1
 ```
 
+## Running Inference
+
+```shell
+$ ./tflite_seg -m img -t <model_path> -i <in_image_path> -b <bg_img_path> -s <save_path>
+$ ./tflite_seg -m vid -t <model_path> -i <in_video_path> -b <bg_img_path> -s <save_path>
+$ ./tflite_seg --help
+```
+
 ## Building tensorflow python with XNNPACK support
 
 [Official source build instructions](https://www.tensorflow.org/install/source)

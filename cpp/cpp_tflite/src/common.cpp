@@ -1,4 +1,5 @@
 #include "common.h"
+#include <getopt.h>
 #include <iostream>
 #include <sstream>
 #include <stdio.h>
@@ -14,6 +15,85 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
+void print_help() {
+  std::cout
+      << "--mode/-m <img/vid>:           Use -m img/vid for image/video mode\n"
+         "--tflite_model_path/-t <path>: Path to tflite model\n"
+         "--in_media_path/-i <path>:     Path to fg img/vid given mode\n"
+         "--bg_image_path/-b <path>:     Path to bg image."
+         "If absent, use a dark bg\n"
+         "--save_path/-s <path>:         Path to save inference image/video."
+         "If absent, no results saved\n"
+         "--help/-h:                     Show help\n";
+}
+
+std::tuple<char *, char *, char *, char *, char *> parse_args(int argc,
+                                                              char **argv) {
+  // init return char ptr vars to nullptr for initialization check later
+  char *mode = nullptr;
+  char *tflite_model_path = nullptr;
+  char *in_media_path = nullptr;
+  char *bg_image_path = nullptr;
+  char *save_path = nullptr;
+
+  const char *const short_opts = "m:t:i:b:s:h";
+  const option long_opts[] = {
+      {"mode", required_argument, nullptr, 'm'},
+      {"tflite_model_path", required_argument, nullptr, 't'},
+      {"in_media_path", required_argument, nullptr, 'i'},
+      {"bg_image_path", required_argument, nullptr, 'b'},
+      {"save_path", required_argument, nullptr, 's'},
+      {"help", no_argument, nullptr, 'h'},
+      {nullptr, no_argument, nullptr, 0}};
+
+  while (true) {
+    const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
+    if (-1 == opt)
+      break;
+
+    switch (opt) {
+    case 'm':
+      mode = optarg;
+      std::cout << "Inference mode: " << mode << "\n";
+      break;
+    case 't':
+      tflite_model_path = optarg;
+      std::cout << "TFlite model path: " << tflite_model_path << "\n";
+      break;
+    case 'i':
+      in_media_path = optarg;
+      std::cout << "Input media path: " << in_media_path << "\n";
+      break;
+    case 'b':
+      bg_image_path = optarg;
+      std::cout << "Background image path: " << bg_image_path << "\n";
+      break;
+    case 's':
+      save_path = optarg;
+      std::cout << "Media save path: " << save_path << "\n";
+      break;
+
+    case 'h': // -h or --help
+    case '?': // Unrecognized option
+    default:
+      print_help();
+      exit(1);
+    }
+  }
+
+  // mode and tflite_model_path must not be nullptr
+  // note for this check to happen, vars must be initialized to nullptr
+  if ((mode == nullptr) || (mode[0] == '\0')) {
+    std::cout << "ERROR: -m img/vid must be specified. Use -h for help" << '\n';
+    exit(-1);
+  } else if ((tflite_model_path == nullptr) || (tflite_model_path[0] == '\0')) {
+    std::cout << "ERROR: tflite model path is needed. Use -h for help \n";
+    exit(-1);
+  }
+  return std::make_tuple(mode, tflite_model_path, in_media_path, bg_image_path,
+                         save_path);
+}
+
 std::string get_basename(std::string full_path) {
   // get model name from full model path
   std::istringstream stream(full_path);
@@ -23,26 +103,28 @@ std::string get_basename(std::string full_path) {
   return str;
 }
 
-bool does_file_exist(const std::string &fpath) {
+bool does_file_exist(const char* fpath) {
   // if check if a file exists in fpath
   struct stat buffer;
-  return (stat(fpath.c_str(), &buffer) == 0);
+  return (stat(fpath, &buffer) == 0);
 }
 
-Settings get_settings(std::string model_path) {
+Settings get_settings(std::string model_path, char *in_media_path,
+                      char *bg_path, char *save_path) {
   Settings s;
-  if (does_file_exist(model_path)) {
-    std::cout << "tflite model found at: " << model_path << '\n';
-  } else {
+  if (!does_file_exist(model_path.c_str())) {
     std::cout << "Invalid tflite model path: " << model_path << '\n';
     exit(1);
   }
 
+  s.in_media_path = in_media_path;
+  s.bg_path = bg_path;
+  s.save_path = save_path;
   s.model_path = model_path;
   return s;
 }
 
-void print_model_struct(std::unique_ptr<tflite::Interpreter>& interpreter) {
+void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter) {
   std::cout << "Printing model layer name and shapes:" << std::endl;
   int t_size = interpreter->tensors_size();
   for (int i = 0; i < t_size; i++) {
@@ -52,7 +134,7 @@ void print_model_struct(std::unique_ptr<tflite::Interpreter>& interpreter) {
                 << interpreter->tensor(i)->type << ", "
                 << interpreter->tensor(i)->params.scale << ", "
                 << interpreter->tensor(i)->params.zero_point << std::endl;
-    }
+  }
 }
 
 std::tuple<IOShape, IOShape>
