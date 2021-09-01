@@ -24,18 +24,22 @@ void print_help() {
          "If absent, use a black background\n"
          "--save_path/-s <path>:         Path to save inference image/video."
          "If absent, no results saved\n"
+         "--use_prev_msk/--p:            Use previous mask for inference "
+         "stability."
+         "Might reduce FPS\n"
          "--verbose/--v:                 Verbose mode if flag specified\n"
          "--help/-h:                     Show help\n";
 }
 
-std::tuple<char *, char *, char *, char *, char *, bool> parse_args(int argc,
-                                                              char **argv) {
+std::tuple<char *, char *, char *, char *, char *, bool>
+parse_args(int argc, char **argv) {
   // init return char ptr vars to nullptr for initialization check later
   char *mode = nullptr;
   char *tflite_model_path = nullptr;
   char *in_media_path = nullptr;
   char *bg_image_path = nullptr;
   char *save_path = nullptr;
+  bool use_prev_msk = false;
   bool verbose = false;
 
   const char *const short_opts = "m:t:i:b:s:h";
@@ -45,6 +49,7 @@ std::tuple<char *, char *, char *, char *, char *, bool> parse_args(int argc,
       {"in_media_path", required_argument, nullptr, 'i'},
       {"bg_image_path", required_argument, nullptr, 'b'},
       {"save_path", required_argument, nullptr, 's'},
+      {"use_prev_msk", no_argument, nullptr, 'p'},
       {"verbose", no_argument, nullptr, 'v'},
       {"help", no_argument, nullptr, 'h'},
       {nullptr, no_argument, nullptr, 0}};
@@ -74,6 +79,10 @@ std::tuple<char *, char *, char *, char *, char *, bool> parse_args(int argc,
     case 's':
       save_path = optarg;
       std::cout << "Media save path: " << save_path << "\n";
+      break;
+    case 'p':
+      use_prev_msk = true;
+      std::cout << "Use previous mask: " << use_prev_msk << "\n";
       break;
     case 'v':
       verbose = true;

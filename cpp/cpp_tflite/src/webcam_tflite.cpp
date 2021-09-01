@@ -146,13 +146,12 @@ int img_mode(Settings &settings) {
   cv::threshold(convMat, convMat, settings.threshold, 1.,
                 cv::THRESH_BINARY_INV);
   cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
-  cv::subtract(bg, convMat * 255.0, bg_mask);
+  cv::subtract(bg, convMat * 255.0, bg_mask); // remove person mask from bg
 
   cv::resize(img, img, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
   img.convertTo(img, CV_32FC3);
 
   cv::multiply(convMat, img, convMat); // mix orig img and generated mask
-
   convMat.convertTo(convMat, CV_8UC3);
   bg_mask.convertTo(bg_mask, CV_8UC3);
   cv::add(convMat, bg_mask, convMat);
@@ -212,7 +211,8 @@ int vid_mode(Settings &settings) {
   }
 
   // declare mat vars & input vector
-  cv::Mat outImage = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
+  cv::Mat mask =
+      cv::Mat::zeros(cv::Size(out_shape.width, out_shape.height), CV_32FC1);
   cv::Mat frame, orig_frame, convMat;
   TfLiteTensor *output_mask = nullptr;
   // Allocate tensor buffers
@@ -221,7 +221,7 @@ int vid_mode(Settings &settings) {
   // diff var to hold inference time in ms
   float diff = 1000.;
   // for removing border feathers
-  int kern_size = 1;
+  int kern_size = 2;
   // MORPH_RECT, MORPH_ELLIPSE
   cv::Mat element = cv::getStructuringElement(
       cv::MORPH_ELLIPSE, cv::Size(2 * kern_size + 1, 2 * kern_size + 1),
@@ -245,6 +245,17 @@ int vid_mode(Settings &settings) {
     cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
     bg.convertTo(bg, CV_32FC3);
   }
+
+  // set prev mask combining params
+  // 0=bg channel, 1=fg channel
+  const int out_channel_index = 0;
+  const float combine_with_prev_ratio = 1.f;
+  const float eps = 0.001;
+  bool use_prev_msk = true;
+  cv::Mat prev_convMat;
+  if (use_prev_msk)
+    std::cout << "INFO: Using previous masks for stability. Might reduce FPS"
+              << '\n';
 
   // Process video frames till video ends or 'q' is pressed
   while (cv::waitKey(1) != 113) {
@@ -273,20 +284,55 @@ int vid_mode(Settings &settings) {
     cv::Mat two_channel(out_shape.height, out_shape.width, CV_32FC2,
                         output_data_ptr);
 
-    // 0=bg channel, 1=fg channel
-    cv::extractChannel(two_channel, convMat, 0);
+    if (!use_prev_msk) {
+      // Use the raw bg mask output, faster but less stable over frames
+      cv::extractChannel(two_channel, mask, 0);
+    } else {
+      // Run softmax over tensor output and blend with previous mask.
+      for (int i = 0; i < out_shape.height; ++i) {
+        for (int j = 0; j < out_shape.width; ++j) {
+          // Only two channel input tensor is supported.
+          const cv::Vec2f input_pix = two_channel.at<cv::Vec2f>(i, j);
+          const float shift = std::max(input_pix[0], input_pix[1]);
+          const float softmax_denom =
+              std::exp(input_pix[0] - shift) + std::exp(input_pix[1] - shift);
+          float new_mask_value =
+              std::exp(input_pix[out_channel_index] - shift) / softmax_denom;
+
+          // Combine prev value with cur using uncertainty^2 as mixing coeff
+          if (use_prev_msk && !prev_convMat.empty()) {
+            const float prev_mask_value = prev_convMat.at<float>(i, j);
+            float uncertainty_alpha =
+                1.0 + (new_mask_value * std::log(new_mask_value + eps) +
+                       (1.0 - new_mask_value) *
+                           std::log(1.0 - new_mask_value + eps)) /
+                          std::log(2.0f);
+            uncertainty_alpha = std::clamp(uncertainty_alpha, 0.0f, 1.0f);
+            // Equivalent to: a = 1 - (1 - a) * (1 - a);  (uncertainty ^ 2)
+            uncertainty_alpha *= 2.0 - uncertainty_alpha;
+            const float mixed_mask_value =
+                new_mask_value * uncertainty_alpha +
+                prev_mask_value * (1.0f - uncertainty_alpha);
+            new_mask_value = mixed_mask_value * combine_with_prev_ratio +
+                             (1.0f - combine_with_prev_ratio) * new_mask_value;
+          }
+          mask.at<float>(i, j) = new_mask_value;
+        }
+      }
+      prev_convMat = mask.clone();
+    }
 
     // post processing
     // removing edge feathering, smoothen boundaries, resize to disp dims
-    cv::dilate(convMat, convMat, element);
+    cv::dilate(mask, convMat, element);
     cv::GaussianBlur(convMat, convMat, cv::Size(3, 3), 3);
     cv::resize(convMat, convMat, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
 
     cv::threshold(convMat, convMat, settings.threshold, 1.,
                   cv::THRESH_BINARY_INV);
     cv::cvtColor(convMat, convMat, cv::COLOR_GRAY2BGR);
+    cv::subtract(bg, convMat * 255.0, bg_mask); // remove person mask from bg
 
-    cv::subtract(bg, convMat * 255.0, bg_mask);
     cv::resize(orig_frame, orig_frame, cv::Size(disp_w, disp_h),
                cv::INTER_LINEAR);
     orig_frame.convertTo(orig_frame, CV_32FC3);

@@ -23,6 +23,8 @@ For using tflite inference, the include dir must have the following structure:
 
 These files can be coped from the original tensorflow git repo.
 
+Install opencv c++ library. For OSX, use homebrew, `brew install opencv`. For Linux follow instructions [here](https://docs.opencv.org/4.5.0/d7/d9f/tutorial_linux_install.html)
+
 ## tflite inference setup
 
 ```shell
