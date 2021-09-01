@@ -1,4 +1,4 @@
-#include "common.h"
+#include "common.hpp"
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
@@ -31,21 +31,19 @@ void print_help() {
          "--help/-h:                     Show help\n";
 }
 
-std::tuple<char *, char *, char *, char *, char *, bool>
-parse_args(int argc, char **argv) {
-  // init return char ptr vars to nullptr for initialization check later
-  char *mode = nullptr;
-  char *tflite_model_path = nullptr;
-  char *in_media_path = nullptr;
-  char *bg_image_path = nullptr;
-  char *save_path = nullptr;
-  bool use_prev_msk = false;
-  bool verbose = false;
+bool does_file_exist(const char *fpath) {
+  // if check if a file exists in fpath
+  struct stat buffer;
+  return (stat(fpath, &buffer) == 0);
+}
+
+Settings get_settings_from_args(int argc, char **argv) {
+  Settings s;
 
   const char *const short_opts = "m:t:i:b:s:h";
   const option long_opts[] = {
       {"mode", required_argument, nullptr, 'm'},
-      {"tflite_model_path", required_argument, nullptr, 't'},
+      {"model_path", required_argument, nullptr, 't'},
       {"in_media_path", required_argument, nullptr, 'i'},
       {"bg_image_path", required_argument, nullptr, 'b'},
       {"save_path", required_argument, nullptr, 's'},
@@ -61,32 +59,32 @@ parse_args(int argc, char **argv) {
 
     switch (opt) {
     case 'm':
-      mode = optarg;
-      std::cout << "Inference mode: " << mode << "\n";
+      s.mode = optarg;
+      std::cout << "Inference mode: " << s.mode << "\n";
       break;
     case 't':
-      tflite_model_path = optarg;
-      std::cout << "TFlite model path: " << tflite_model_path << "\n";
+      s.model_path = optarg;
+      std::cout << "TFlite model path: " << s.model_path << "\n";
       break;
     case 'i':
-      in_media_path = optarg;
-      std::cout << "Input media path: " << in_media_path << "\n";
+      s.in_media_path = optarg;
+      std::cout << "Input media path: " << s.in_media_path << "\n";
       break;
     case 'b':
-      bg_image_path = optarg;
-      std::cout << "Background image path: " << bg_image_path << "\n";
+      s.bg_path = optarg;
+      std::cout << "Background image path: " << s.bg_path << "\n";
       break;
     case 's':
-      save_path = optarg;
-      std::cout << "Media save path: " << save_path << "\n";
+      s.save_path = optarg;
+      std::cout << "Media save path: " << s.save_path << "\n";
       break;
     case 'p':
-      use_prev_msk = true;
-      std::cout << "Use previous mask: " << use_prev_msk << "\n";
+      s.use_prev_msk = true;
+      std::cout << "Use previous mask: " << s.use_prev_msk << "\n";
       break;
     case 'v':
-      verbose = true;
-      std::cout << "Verbose mode: " << verbose << "\n";
+      s.verbose = true;
+      std::cout << "Verbose mode: " << s.verbose << "\n";
       break;
 
     case 'h': // -h or --help
@@ -99,15 +97,26 @@ parse_args(int argc, char **argv) {
 
   // mode and tflite_model_path must not be nullptr
   // note for this check to happen, vars must be initialized to nullptr
-  if ((mode == nullptr) || (mode[0] == '\0')) {
+  if ((s.mode == nullptr) || (s.mode[0] == '\0')) {
     std::cout << "ERROR: -m img/vid must be specified. Use -h for help" << '\n';
-    exit(-1);
-  } else if ((tflite_model_path == nullptr) || (tflite_model_path[0] == '\0')) {
+    exit(1);
+  } else if ((s.model_path == nullptr) || (s.model_path[0] == '\0')) {
     std::cout << "ERROR: tflite model path is needed. Use -h for help \n";
-    exit(-1);
+    exit(1);
   }
-  return std::make_tuple(mode, tflite_model_path, in_media_path, bg_image_path,
-                         save_path, verbose);
+
+  // if the paths are not NULL and are valid
+  if (!does_file_exist(s.model_path)) {
+    std::cout << "ERROR: Invalid tflite model path: " << s.model_path << '\n';
+    exit(1);
+  } else if (s.in_media_path != nullptr && !does_file_exist(s.in_media_path)) {
+    std::cout << "ERROR: Invalid in media path: " << s.in_media_path << '\n';
+    exit(1);
+  } else if (s.bg_path != nullptr && !does_file_exist(s.bg_path)) {
+    std::cout << "ERROR: Invalid bg image path: " << s.bg_path << '\n';
+    exit(1);
+  }
+  return s;
 }
 
 std::string get_basename(std::string full_path) {
@@ -117,35 +126,6 @@ std::string get_basename(std::string full_path) {
   while (std::getline(stream, str, '/')) {
   }
   return str;
-}
-
-bool does_file_exist(const char *fpath) {
-  // if check if a file exists in fpath
-  struct stat buffer;
-  return (stat(fpath, &buffer) == 0);
-}
-
-Settings get_settings(std::string model_path, char *in_media_path,
-                      char *bg_path, char *save_path, bool verbose) {
-  Settings s;
-  // if the paths are not NULL and are valid
-  if (!does_file_exist(model_path.c_str())) {
-    std::cout << "ERROR: Invalid tflite model path: " << model_path << '\n';
-    exit(1);
-  } else if (in_media_path != nullptr && !does_file_exist(in_media_path)) {
-    std::cout << "ERROR: Invalid in media path: " << in_media_path << '\n';
-    exit(1);
-  } else if (bg_path != nullptr && !does_file_exist(bg_path)) {
-    std::cout << "ERROR: Invalid bg image path: " << bg_path << '\n';
-    exit(1);
-  }
-
-  s.in_media_path = in_media_path;
-  s.bg_path = bg_path;
-  s.save_path = save_path;
-  s.model_path = model_path;
-  s.verbose = verbose;
-  return s;
 }
 
 void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter) {

@@ -49,6 +49,18 @@ def inference_model(vid_path,
 
     ret, frame = cap.read()
     fps = ""
+
+    chosen_channel = "foreground"
+    use_prev_msk = True
+    eps = 0.001
+    prev_mask = None
+    combine_with_prev_ratio = 0.8
+    channel_to_index = {'background': 0, 'foreground': 1}  # 0 is more stable
+    out_channel_index = channel_to_index[chosen_channel]
+    if use_prev_msk:
+        print("INFO: Using previous masks for stability. Might reduce FPS")
+    print(f"INFO: Using {chosen_channel} channel in output for display")
+
     while ret:
         t1 = time()
         ret, frame = cap.read()
@@ -63,16 +75,34 @@ def inference_model(vid_path,
         # Predict Segmentation
         interpreter.set_tensor(input_node, simg)
         interpreter.invoke()
-        out = interpreter.get_tensor(output_node)
+        out = interpreter.get_tensor(output_node)[0]
 
-        # 0: background channel, 1: foreground channel, 0 is more stable
-        msk = out[0][:, :, 0]
+        if not use_prev_msk:
+            # use out_channel_index frame without using prev frame
+            msk = out[0][:, :, out_channel_index]
+        else:
+            # softmax to get values from 0-1
+            msk = np.exp(out[:, :, out_channel_index]) / \
+                np.sum(np.exp(out), axis=2)
+            if prev_mask is not None:
+                uncertainty_alpha = 1.0 + \
+                    (msk * np.log(msk + eps) + (1.0 - msk)
+                     * np.log(1.0 - msk + eps)) / np.log(2.0)
+                uncertainty_alpha = np.clip(uncertainty_alpha, 0.0, 1.0)
+                # Equivalent to: a = 1 - (1 - a) * (1 - a);  (squaring the uncertainty)
+                uncertainty_alpha *= 2.0 - uncertainty_alpha
+                mixed_mask_value = msk * uncertainty_alpha + \
+                    prev_mask * (1.0 - uncertainty_alpha)
+                msk = mixed_mask_value * combine_with_prev_ratio + \
+                    (1.0 - combine_with_prev_ratio) * msk
+            prev_mask = msk
 
         """ MORPH_OPEN SMOOTHING """
         if post_processing == PostProcessingType.MORPH_OPEN:
             # since we are post-processing the bg mask
-            msk = cv2.dilate(msk, np.ones((3, 3), dtype=np.uint8),
-                             iterations=default_dilate_iterations)
+            if chosen_channel == "background":
+                msk = cv2.dilate(msk, np.ones((3, 3), dtype=np.uint8),
+                                 iterations=default_dilate_iterations)
             kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
                 default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
@@ -83,8 +113,9 @@ def inference_model(vid_path,
         """ GAUSSIAN SMOOTHING """
         if post_processing == PostProcessingType.GAUSSIAN:
             # since we are post-processing the bg mask
-            msk = cv2.dilate(msk, np.ones((3, 3), dtype=np.uint8),
-                             iterations=default_dilate_iterations)
+            if chosen_channel == "background":
+                msk = cv2.dilate(msk, np.ones((5, 5), dtype=np.uint8),
+                                 iterations=default_dilate_iterations)
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),
@@ -92,7 +123,7 @@ def inference_model(vid_path,
                                    sigmaY=0)
 
         frame = get_frame_after_postprocess(
-            msk, img, bgd, (bg_w, bg_h), (disp_w, disp_h), default_threshold, foreground="bgd")
+            msk, img, bgd, (bg_w, bg_h), (disp_w, disp_h), default_threshold, foreground="img")
         # Display the resulting frame & FPS
         cv2.putText(frame, fps, (disp_h - 180, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)

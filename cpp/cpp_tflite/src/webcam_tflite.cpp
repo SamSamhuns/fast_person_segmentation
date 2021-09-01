@@ -11,7 +11,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
-#include "common.h"
+#include "common.hpp"
 // tensorflowlite headers
 #include "tensorflow/lite/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
@@ -24,29 +24,23 @@ int vid_mode(Settings &settings);
 
 int main(int argc, char *argv[]) {
   // parse args and fill vars
-  // in_media_path, bg_image_path and save_path can be nullptr pointers
-  char *mode, *model_path, *in_media_path, *bg_path, *save_path;
-  bool verbose;
-  std::tie(mode, model_path, in_media_path, bg_path, save_path, verbose) =
-      parse_args(argc, argv);
+  Settings settings = get_settings_from_args(argc, argv);
 
-  Settings settings =
-      get_settings(model_path, in_media_path, bg_path, save_path, verbose);
-
-  if (strcmp(mode, "img") == 0) {
-    if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) {
+  if (strcmp(settings.mode, "img") == 0) {
+    if ((settings.in_media_path == nullptr) ||
+        (settings.in_media_path[0] == '\0')) {
       std::cout << "ERROR: Input image path is needed. Use -h for help\n";
       exit(1);
     }
     img_mode(settings);
-  } else if (strcmp(mode, "vid") == 0) {
+  } else if (strcmp(settings.mode, "vid") == 0) {
     vid_mode(settings);
   }
   return 0;
 }
 
 int img_mode(Settings &settings) {
-  const char *model_filepath = settings.model_path.c_str();
+  const char *model_filepath = settings.model_path;
   char *in_media_path = settings.in_media_path;
   char *bg_path = settings.bg_path;
   char *save_path = settings.save_path;
@@ -166,7 +160,7 @@ int img_mode(Settings &settings) {
 }
 
 int vid_mode(Settings &settings) {
-  const char *model_filepath = settings.model_path.c_str();
+  const char *model_filepath = settings.model_path;
   char *in_media_path = settings.in_media_path;
   char *bg_path = settings.bg_path;
   char *save_path = settings.save_path;
@@ -247,11 +241,11 @@ int vid_mode(Settings &settings) {
   }
 
   // set prev mask combining params
+  bool use_prev_msk = settings.use_prev_msk;
   // 0=bg channel, 1=fg channel
   const int out_channel_index = 0;
   const float combine_with_prev_ratio = 1.f;
   const float eps = 0.001;
-  bool use_prev_msk = true;
   cv::Mat prev_convMat;
   if (use_prev_msk)
     std::cout << "INFO: Using previous masks for stability. Might reduce FPS"
