@@ -10,7 +10,8 @@ For using tflite inference, the include dir must have the following structure:
 
     └── include
         ├── common
-        │   └── common.h
+        │   ├── common.h
+        |   └── camera_streamer.hpp
         ├── tensorflow
         │   ├── core
         │   │   ├── kernels
@@ -23,7 +24,14 @@ For using tflite inference, the include dir must have the following structure:
 
 These files can be coped from the original tensorflow git repo.
 
-Install opencv, in OsX, use homebrew, `brew install opencv`. Linux instructions present [here](https://docs.opencv.org/4.5.0/d7/d9f/tutorial_linux_install.html)
+Install opencv, in OsX, use homebrew, `brew install opencv`.
+
+-   [Linux Installation Instructions](https://docs.opencv.org/4.5.0/d7/d9f/tutorial_linux_install.html)
+
+The multi=threading `intel tbb` library is also required for multi-threading.
+
+-   [Documentation](https://spec.oneapi.io/versions/0.5.0/oneTBB/general.html)
+-   [Installation Instructions](https://github.com/oneapi-src/oneTBB)
 
 ## tflite inference setup
 
