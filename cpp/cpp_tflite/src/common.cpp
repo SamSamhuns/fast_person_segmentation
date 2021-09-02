@@ -24,10 +24,10 @@ void print_help() {
          "If absent, use a black background\n"
          "--save_path/-s <path>:         Path to save inference image/video."
          "If absent, no results saved\n"
-         "--use_prev_msk/--p:            Use previous mask for inference "
+         "--use_prev_msk/-p:             Use previous mask for inference "
          "stability."
          "Might reduce FPS\n"
-         "--verbose/--v:                 Verbose mode if flag specified\n"
+         "--verbose/-v:                  Verbose mode if flag specified\n"
          "--help/-h:                     Show help\n";
 }
 
@@ -40,7 +40,7 @@ bool does_file_exist(const char *fpath) {
 Settings get_settings_from_args(int argc, char **argv) {
   Settings s;
 
-  const char *const short_opts = "m:t:i:b:s:h";
+  const char *const short_opts = "m:t:i:b:s:pvh";
   const option long_opts[] = {
       {"mode", required_argument, nullptr, 'm'},
       {"model_path", required_argument, nullptr, 't'},
