@@ -5,6 +5,7 @@
 #include <numeric>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 #include <unordered_map>
 
 #include <opencv2/highgui.hpp>
@@ -198,15 +199,17 @@ int vid_mode(Settings &settings) {
   namedWindow(disp_window_name, cv::WINDOW_NORMAL);
 
   // Capture frames from video
-  // if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) {
-  //   // webcam mode
-  //   std::vector<int> capture_src = {0};
-  // } else {
-  //   // video loaded from path
-  //   std::vector<std::string> capture_src = {in_media_path};
-  // }
-  std::vector<int> capture_src = {0};
-  CameraStreamer cap(capture_src);
+  std::unique_ptr<CameraStreamer> cap;  // unique_ptr to create class ref without init
+  int qsize = 2; // set a small max qsize <= 2
+  if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) {
+    // webcam mode
+    std::vector<int> capture_src = {0};
+    cap = std::make_unique<CameraStreamer>(capture_src, qsize);
+  } else {
+    // video loaded from path
+    std::vector<std::string> capture_src = {in_media_path};
+    cap = std::make_unique<CameraStreamer>(capture_src, qsize);
+  }
 
   // declare mat vars & input vector
   cv::Mat mask =
@@ -228,7 +231,7 @@ int vid_mode(Settings &settings) {
   // set up opencv video writer if save_path is provided
   cv::VideoWriter video;
   if ((save_path != nullptr) && (save_path[0] != '\0')) {
-    int fps = 25;
+    int fps = 25;  // save FPS
     video.open(save_path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps,
                cv::Size(disp_w, disp_h));
   }
@@ -254,13 +257,14 @@ int vid_mode(Settings &settings) {
   if (use_prev_msk)
     std::cout << "INFO: Using previous masks for stability. Might reduce FPS"
               << '\n';
-
   // Process video frames till video ends or 'q' is pressed
   while (cv::waitKey(3) != 113) {
     auto start = std::chrono::steady_clock::now();
     // Read frames from camera
     cv::Mat frame;
-    if (cap.frame_queue[0]->try_pop(frame)) {
+    if (cap->frame_queue[0]->pop(frame)) {
+      if (frame.empty())
+        break;
       orig_frame = frame.clone();
       cv::resize(frame, frame, cv::Size(in_shape.width, in_shape.height),
                  cv::INTER_AREA);

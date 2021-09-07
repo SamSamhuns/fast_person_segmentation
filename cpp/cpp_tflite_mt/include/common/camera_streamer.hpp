@@ -20,15 +20,16 @@ public:
   std::vector<std::thread *> camera_thread;
 
   // Constructor for IP Camera capture
-  CameraStreamer(std::vector<std::string> source);
+  CameraStreamer(std::vector<std::string> source, int qsize);
   // Constructor for USB Camera capture
-  CameraStreamer(std::vector<int> index);
+  CameraStreamer(std::vector<int> index, int qsize);
   // Destructor for releasing resource(s)
   ~CameraStreamer();
 
 private:
   bool isUSBCamera;
   int camera_count;
+  int max_queue_size;  // set to small value like <= 2
   // initialize and start the camera capturing process(es)
   void startMultiCapture();
   // release all camera capture resource(s)

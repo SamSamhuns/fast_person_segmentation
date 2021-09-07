@@ -1,17 +1,19 @@
 #include "camera_streamer.hpp"
 
-CameraStreamer::CameraStreamer(std::vector<std::string> stream_source) {
+CameraStreamer::CameraStreamer(std::vector<std::string> stream_source, int qsize) {
   camera_source = stream_source;
   camera_count = camera_source.size();
   isUSBCamera = false;
+  max_queue_size = qsize;
 
   startMultiCapture();
 }
 
-CameraStreamer::CameraStreamer(std::vector<int> capture_index) {
+CameraStreamer::CameraStreamer(std::vector<int> capture_index, int qsize) {
   camera_index = capture_index;
   camera_count = capture_index.size();
   isUSBCamera = true;
+  max_queue_size = qsize;
 
   startMultiCapture();
 }
@@ -27,7 +29,7 @@ void CameraStreamer::captureFrame(int index) {
 
     // Put frame to the queue,
     // if capcity is not at full otherwise wait
-    frame_queue[index]->try_push(frame);
+    frame_queue[index]->push(frame);
     // relase frame resource
     frame.release();
   }
@@ -62,7 +64,7 @@ void CameraStreamer::startMultiCapture() {
     q = new tbb::concurrent_bounded_queue<cv::Mat>;
     // set capacity for queue to prevent producer overflow
     // set queue capacity to a lower number
-    q->set_capacity(2);
+    q->set_capacity(max_queue_size);
 
     // Put queue to the vector
     frame_queue.push_back(q);
@@ -76,7 +78,6 @@ void CameraStreamer::stopMultiCapture() {
     if (cap->isOpened()) {
       // Relase VideoCapture resource
       cap->release();
-      std::cout << "Capture " << i << " released" << std::endl;
     }
   }
 }
