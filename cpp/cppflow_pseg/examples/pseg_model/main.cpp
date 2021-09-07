@@ -221,7 +221,7 @@ model_info_struct get_model_struct(std::string model_type, char *in_media_path,
   std::string input_layer, output_layer, model_path;
 
   const static std::unordered_map<std::string, int> model_num_map{
-      {"m1", 1}, {"m2", 2}, {"m3", 3}, {"m4", 4}, {"m5", 4}};
+      {"m1", 1}, {"m2", 2}, {"m3", 3}, {"m4", 4}};
 
   switch (model_num_map.count(model_type) ? model_num_map.at(model_type) : 0) {
   case 1:
@@ -260,15 +260,6 @@ model_info_struct get_model_struct(std::string model_type, char *in_media_path,
     output_layer = "op/Sigmoid";
     model_path = "../model_zoo/prisma_orig_s256.pb";
     break;
-  case 5:
-    std::cout << "Model mnetv3_decoder chosen" << std::endl;
-    threshold = 0.8;
-    input_width = 256;
-    input_height = 144;
-    input_layer = "input_1";
-    output_layer = "segment";
-    model_path = "../model_zoo/mnetv3_decoder_144x256.pb";
-    break;
   case 0: // for the undefined case
     std::cout << "Error. Model type " << model_type << " not available"
               << std::endl;
@@ -300,7 +291,7 @@ void print_model_operations(Model *model) {
 void print_help() {
   std::cout
       << "--mode/-m <img/vid>:           Use -m img/vid for image/video mode\n"
-         "--model_type/-t <path>:        Model type <m1/m2/m3/m4/m5>\n"
+         "--model_type/-t <path>:        Model type <m1/m2/m3/m4>\n"
          "--in_media_path/-i <path>:     Path to fg img/vid given mode\n"
          "--bg_image_path/-b <path>:     Path to bg image."
          "If absent, use a black background\n"

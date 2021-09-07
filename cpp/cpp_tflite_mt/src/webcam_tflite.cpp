@@ -5,7 +5,6 @@
 #include <numeric>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fstream>
 #include <unordered_map>
 
 #include <opencv2/highgui.hpp>
