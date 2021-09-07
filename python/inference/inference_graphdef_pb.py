@@ -79,7 +79,10 @@ def inference_model(vid_path,
             # Predict
             out = sess.run(prob_tensor, {input_node: [simg]})
 
-            msk = np.float32(out).reshape((in_h, in_w, 1))
+            if config_dict['pb'] == "models/selfie_seg/144x256/model_v2.pb":
+                msk = np.float32(out).reshape((in_h, in_w, 2))[:, :, 1]
+            else:
+                msk = np.float32(out).reshape((in_h, in_w, 1))
             """ MORPH_OPEN SMOOTHING """
             if post_processing == PostProcessingType.MORPH_OPEN:
                 kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))

@@ -4,7 +4,7 @@ from time import time
 
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
-from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess
+from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess, remove_argparse_option
 from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
 
 
@@ -84,10 +84,14 @@ def inference_model(vid_path,
         results = OpenVinoExecutable.infer(inputs={InputLayer: simg})
         out = results[OutputLayer][0]
 
-        msk = np.float32(out).reshape((in_h, in_w, 1))
+        if config_dict['ov_bin'] == "models/selfie_seg/144x256/openvino/FP32/144x256/model_v2.bin":
+            msk = out[1, :, :]
+        else:
+            msk = np.float32(out).reshape((in_h, in_w, 1))
         """ MORPH_OPEN SMOOTHING """
         if post_processing == PostProcessingType.MORPH_OPEN:
-            kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
+            kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
+                default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,
                                    kernel=kernel,
@@ -120,13 +124,26 @@ def inference_model(vid_path,
 
 def main():
     parser = get_cmd_argparser(default_model=None)
+    remove_argparse_option(parser, "model_path")
+    parser.add_argument(
+        '-mx',
+        '--model_xml',
+        type=str,
+        required=False,
+        default="models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml",
+        help="Path to inference model (i.e. h5/tflite/pb fmt)")
+    parser.add_argument(
+        '-mb',
+        '--model_bin',
+        type=str,
+        required=False,
+        default="models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin",
+        help="Path to inference model (i.e. h5/tflite/pb fmt)")
     args = parser.parse_args()
-    model_xml = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml"
-    model_bin = "models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin"
     inference_model(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
-                    xml_model_path=model_xml,
-                    bin_model_path=model_bin,
+                    xml_model_path=args.model_xml,
+                    bin_model_path=args.model_bin,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 

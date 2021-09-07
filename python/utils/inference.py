@@ -99,6 +99,27 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
     return parser
 
 
+def remove_argparse_option(parser, arg):
+    """
+    args:
+        parser: parser object
+        arg: argument name without leading dash
+    """
+    for action in parser._actions:
+        if (vars(action)['option_strings']
+            and vars(action)['option_strings'][0] == arg) \
+                or vars(action)['dest'] == arg:
+            parser._remove_action(action)
+
+    for action in parser._action_groups:
+        vars_action = vars(action)
+        var_group_actions = vars_action['_group_actions']
+        for x in var_group_actions:
+            if x.dest == arg:
+                var_group_actions.remove(x)
+                return
+
+
 def get_config_dict(model_path, json_config_path):
     """
     load json_config_path as dict and return config of selected model
