@@ -4,7 +4,7 @@ from time import time
 import tensorflow as tf
 
 from utils.inference import load_bgd, get_cmd_argparser, get_frame_after_postprocess
-from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
+from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_stream_widget
 
 
 def inference_model(vid_path,
@@ -41,7 +41,7 @@ def inference_model(vid_path,
     cv2_disp_name = post_processing.name
     # check if multi-threading is to be used
     if multi_thread:
-        cap = VideoStreamMultiThreadWidget(vid_path)
+        cap = get_video_stream_widget(vid_path)
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:

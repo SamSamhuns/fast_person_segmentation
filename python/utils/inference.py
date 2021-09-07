@@ -1,6 +1,7 @@
 # utils for model inference
 from pathlib import Path, PurePath
 from threading import Thread
+from queue import Queue
 from time import sleep
 from enum import Enum
 import numpy as np
@@ -17,9 +18,49 @@ class PostProcessingType(Enum):
     MORPH_OPEN = "morph_open"
 
 
-class VideoStreamMultiThreadWidget(object):
+class VideoStreamMTQueueWidget(object):
+    def __init__(self, src=0, maxsize=3):
+        """
+        Does not allow dropping of frames with the use of blocking queues
+        Args:
+            src: path to video or 0 for webcam or other camera index
+            maxsize: size of frame load Queue
+        """
+        print(f"INFO: Setting up blocking queue multi-threading video IO from src {src}")
+        self.capture = cv2.VideoCapture(src)
+        self.frame_queue = Queue(maxsize=maxsize)
+        # immediately start a thread to read frames from the video stream
+        self.thread = Thread(target=self.update, args=())
+        self.thread.daemon = True
+        self.thread.start()
+
+    def update(self):
+        # read the next frame from the stream in a different thread
+        while True:
+            if self.capture.isOpened():
+                status, frame = self.capture.read()
+                # blocking operation if queue is full
+                self.frame_queue.put((status, frame))
+            else:
+                return
+
+    def read(self):
+        return self.frame_queue.get()
+
+    def release(self):
+        self.capture.release()
+
+
+class VideoStreamMTNoQueueWidget(object):
     def __init__(self, src=0):
-        print(f"INFO: Setting up multi-threading video IO from src {src}")
+        """
+        Recommended for webcam use
+        This class is faster than VideoStreamMTQueueWidget
+        Queue blocking is not used for storing frames so webcam frames might be dropped
+        Args:
+            src: path to video or 0 for webcam or other camera index
+        """
+        print(f"INFO: Setting up no-queue multi-threading video IO from src {src}")
         self.capture = cv2.VideoCapture(src)
         self.status = self.capture.isOpened()
         # immediately start a thread to read frames from the video stream
@@ -62,6 +103,16 @@ class ImageioVideoWriter(object):
 
     def close(self):
         self.writer.close()
+
+
+def get_video_stream_widget(vid_path):
+    """
+    returns a video stream widget based on the video_src
+    """
+    if isinstance(vid_path, int):
+        return VideoStreamMTNoQueueWidget(vid_path)
+    elif isinstance(vid_path, str) and Path(vid_path).is_file():
+        return VideoStreamMTQueueWidget(vid_path)
 
 
 def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.hdf5"):

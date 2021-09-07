@@ -5,7 +5,7 @@ from time import time
 # Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
 from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess, remove_argparse_option
-from utils.inference import PostProcessingType, ImageioVideoWriter, VideoStreamMultiThreadWidget
+from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_stream_widget
 
 
 def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CPU"):
@@ -60,7 +60,7 @@ def inference_model(vid_path,
     cv2_disp_name = post_processing.name
     # check if multi-threading is to be used
     if multi_thread:
-        cap = VideoStreamMultiThreadWidget(vid_path)
+        cap = get_video_stream_widget(vid_path)
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:

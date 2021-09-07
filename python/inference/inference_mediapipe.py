@@ -5,7 +5,7 @@ import mediapipe as mp
 from time import time
 from enum import Enum
 from utils.inference import get_cmd_argparser, load_bgd
-from utils.inference import VideoStreamMultiThreadWidget, ImageioVideoWriter
+from utils.inference import get_video_stream_widget, ImageioVideoWriter
 
 
 class InferenceMode(Enum):
@@ -63,7 +63,7 @@ def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, t
 
     # check if multi-threading is to be used
     if multi_thread:
-        cap = VideoStreamMultiThreadWidget(vid_path)
+        cap = get_video_stream_widget(vid_path)
     else:
         cap = cv2.VideoCapture(vid_path)
     if output_dir is not None:
