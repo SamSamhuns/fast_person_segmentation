@@ -18,10 +18,12 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-echo "Running docker with exposed fast api http port: $http"
+echo "Stopping docker container 'pseg_wcam_aiortc_server_cont ' if it is running"
+docker stop pseg_wcam_aiortc_server_cont || true
+docker rm pseg_wcam_aiortc_server_cont || true
 
-docker run \
-      --rm \
+echo "Running docker with exposed fast api http port: $http"
+docker run --rm -d \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
       --name pseg_wcam_aiortc_server_cont \
       -p $http:8080 \
