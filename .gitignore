@@ -147,3 +147,5 @@ python/models
 # tensorflow library files
 cpp/cpp_tflite/include/tensorflow
 cpp/cpp_tflite/include/third_party
+cpp/cpp_tflite_mt/include/tensorflow
+cpp/cpp_tflite_mt/include/third_party
