@@ -1,6 +1,8 @@
+from time import time
+from typing import Optional
+
 import cv2
 import numpy as np
-from time import time
 import tensorflow as tf
 from tensorflow.python.platform import gfile
 
@@ -9,12 +11,12 @@ from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_st
 tf.config.optimizer.set_jit(True)
 
 
-def inference_model(vid_path,
-                    bg_img_path,
-                    pb_model_path,
-                    json_config_path="models/model_info.json",
-                    multi_thread=True,
-                    output_dir=None):
+def inference_model(vid_path: str,
+                    bg_img_path: str,
+                    pb_model_path: str,
+                    json_config_path: str = "models/model_info.json",
+                    multi_thread: bool = True,
+                    output_dir: Optional[str] = None):
     # choose parameters
     post_processing = PostProcessingType.GAUSSIAN
     default_threshold = 0.63
@@ -29,7 +31,8 @@ def inference_model(vid_path,
     in_h, in_w = config_dict["in_height"], config_dict["in_width"]
 
     # Load background image, if path is None, use dark background
-    def post_process(img): return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    def post_process(img):
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     bgd = load_bgd(bg_img_path, bg_w, bg_h, post_process=post_process)
 
     # load video
@@ -85,7 +88,8 @@ def inference_model(vid_path,
                 msk = np.float32(out).reshape((in_h, in_w, 1))
             """ MORPH_OPEN SMOOTHING """
             if post_processing == PostProcessingType.MORPH_OPEN:
-                kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
+                kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
+                    default_mopen_ksize, default_mopen_ksize))
                 msk = cv2.morphologyEx(msk,
                                        cv2.MORPH_OPEN,
                                        kernel=kernel,

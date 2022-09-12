@@ -1,14 +1,15 @@
+from time import time
+from typing import Optional
+
 import cv2
 import numpy as np
-from time import time
-
-# Import OpenVINO Inference Engine
 from openvino.inference_engine import IECore
+
 from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_frame_after_postprocess, remove_argparse_option
 from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_stream_widget
 
 
-def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CPU"):
+def get_openvino_core_net_exec(model_xml_path: str, model_bin_path: str, target_device: str = "CPU"):
     # load IECore object
     OpenVinoIE = IECore()
 
@@ -23,13 +24,13 @@ def get_openvino_core_net_exec(model_xml_path, model_bin_path, target_device="CP
     return OpenVinoIE, OpenVinoNetwork, OpenVinoExecutable
 
 
-def inference_model(vid_path,
-                    bg_img_path,
-                    xml_model_path,
-                    bin_model_path,
+def inference_model(vid_path: str,
+                    bg_img_path: str,
+                    xml_model_path: str,
+                    bin_model_path: str,
                     multi_thread=True,
-                    json_config_path="models/model_info.json",
-                    output_dir=None):
+                    json_config_path: str = "models/model_info.json",
+                    output_dir: Optional[str] = None):
     # choose parameters
     post_processing = PostProcessingType.GAUSSIAN
     default_threshold = 0.63
@@ -126,19 +127,15 @@ def main():
     parser = get_cmd_argparser(default_model=None)
     remove_argparse_option(parser, "model_path")
     parser.add_argument(
-        '-mx',
-        '--model_xml',
-        type=str,
-        required=False,
+        "--mx", "--model_xml",
+        type=str, dest="model_xml", required=False,
         default="models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.xml",
-        help="Path to inference model (i.e. h5/tflite/pb fmt)")
+        help="Path to inference model (default: %(default)s)")
     parser.add_argument(
-        '-mb',
-        '--model_bin',
-        type=str,
-        required=False,
+        "--mb", "--model_bin",
+        type=str, dest="model_bin", required=False,
         default="models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin",
-        help="Path to inference model (i.e. h5/tflite/pb fmt)")
+        help="Path to inference model (default: %(default)s)")
     args = parser.parse_args()
     inference_model(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,

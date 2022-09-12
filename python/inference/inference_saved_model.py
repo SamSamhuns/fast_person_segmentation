@@ -74,7 +74,7 @@ def inference_model(vid_path,
         # 0: background channel, 1: foreground channel, 0 is more stable
         msk = out[0][:, :, 0]
         msk = np.float32(msk)
-        """ MORPH_OPEN SMOOTHING """
+        """MORPH_OPEN SMOOTHING"""
         if post_processing == PostProcessingType.MORPH_OPEN:
             kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(default_mopen_ksize, default_mopen_ksize))
             msk = cv2.morphologyEx(msk,
@@ -82,7 +82,7 @@ def inference_model(vid_path,
                                    kernel=kernel,
                                    iterations=default_mopen_iter)
 
-        """ GAUSSIAN SMOOTHING """
+        """GAUSSIAN SMOOTHING"""
         if post_processing == PostProcessingType.GAUSSIAN:
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,

@@ -1,17 +1,19 @@
+from time import time
+from typing import Optional
+
 import cv2
 import numpy as np
-from time import time
 import tensorflow as tf
 
 from utils.inference import load_bgd, get_cmd_argparser, get_frame_after_postprocess
 from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_stream_widget
 
 
-def inference_model(vid_path,
-                    bg_img_path,
-                    tflite_model_path,
-                    multi_thread=True,
-                    output_dir=None):
+def inference_model(vid_path: str,
+                    bg_img_path: str,
+                    tflite_model_path: str,
+                    multi_thread: bool = True,
+                    output_dir: Optional[str] = None):
     # choose parameters
     post_processing = PostProcessingType.GAUSSIAN
     default_threshold = 0.8
@@ -23,7 +25,8 @@ def inference_model(vid_path,
     disp_h, disp_w = 720, 1200
 
     # Load background image, if path is None, use dark background
-    def post_process_bg_img(img): return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    def post_process_bg_img(img):
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     bgd = load_bgd(bg_img_path, bg_w, bg_h, post_process=post_process_bg_img)
 
     # load video

@@ -1,5 +1,7 @@
-from tensorflow.keras.models import load_model
+from typing import Optional
 from time import time
+
+from tensorflow.keras.models import load_model
 import numpy as np
 import cv2
 
@@ -7,16 +9,16 @@ from utils.inference import load_bgd, get_cmd_argparser, get_config_dict, get_fr
 from utils.inference import ImageioVideoWriter, get_video_stream_widget
 
 
-def nothing(x):
+def nothing(x) -> None:
     pass
 
 
-def inference_model(vid_path,
-                    bg_img_path,
-                    model_path,
-                    multi_thread=True,
-                    json_config_path="models/model_info.json",
-                    output_dir=None):
+def inference_model(vid_path: str,
+                    bg_img_path: str,
+                    model_path: str,
+                    multi_thread: str = True,
+                    json_config_path: str = "models/model_info.json",
+                    output_dir: Optional[str] = None):
     # choose parameters
     default_threshold = 13
     default_skip_frame = 0
@@ -81,7 +83,7 @@ def inference_model(vid_path,
 
         if skip_frame == 0 or COUNT % skip_frame == 0:
             # predict segmentation
-            out = model.predict(simg)
+            out = model.predict(simg, verbose=False)
             msk = np.float32(out).reshape((in_h, in_w, 1))
             msk = cv2.morphologyEx(msk,
                                    cv2.MORPH_OPEN,

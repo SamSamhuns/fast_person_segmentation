@@ -1,9 +1,11 @@
+from time import time
+from enum import Enum
+from typing import Optional
+
 import cv2
 import numpy as np
 import mediapipe as mp
 
-from time import time
-from enum import Enum
 from utils.inference import get_cmd_argparser, load_bgd
 from utils.inference import get_video_stream_widget, ImageioVideoWriter
 
@@ -16,7 +18,7 @@ class InferenceMode(Enum):
 
 
 class BackgroundMode(Enum):
-    """bBackground Mode
+    """Background Mode
     """
     BLUR = "blur"
 
@@ -27,7 +29,7 @@ mp_holistic = mp.solutions.holistic
 mp_objectron = mp.solutions.objectron
 
 
-def image_inference(image_path_list, thres=0.38):
+def image_inference(image_path_list: str, thres: bool = 0.38):
     MASK_COLOR = (255, 255, 255)  # white
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=0) as selfie_segmentation:
 
@@ -48,11 +50,16 @@ def image_inference(image_path_list, thres=0.38):
             fg_image[:] = MASK_COLOR
             bg_image = np.zeros(image.shape, dtype=np.uint8)
             output_image = np.where(condition, fg_image, bg_image)
-            cv2.imwrite('/tmp/selfie_segmentation_output' +
-                        str(idx) + '.png', output_image)
+            cv2.imwrite(
+                f"/tmp/selfie_segmentation_output{str(idx)}.png", output_image)
 
 
-def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, thres=0.8, output_dir=None):
+def video_inference(vid_path: str,
+                    bg_image_path: str,
+                    bg_mode: Optional[BackgroundMode] = None,
+                    multi_thread: bool = False,
+                    thres: float = 0.8,
+                    output_dir: Optional[str] = None):
     """
     vid_path: path to video file or use 0 for webcam
     """
@@ -114,7 +121,8 @@ def video_inference(vid_path, bg_image_path, bg_mode=None, multi_thread=False, t
             cv2.imshow('Selfie Segmentation', output_image)
             if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
-            vwriter.write_frame(output_image[..., ::-1]) if output_dir else None
+            vwriter.write_frame(
+                output_image[..., ::-1]) if output_dir else None
             fps = f"FPS: {1/(time() - itime):.1f}"
         vwriter.close() if output_dir else None
         cap.release()

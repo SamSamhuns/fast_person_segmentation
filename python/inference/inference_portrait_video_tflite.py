@@ -1,15 +1,16 @@
+from time import time
+
 import cv2
 import numpy as np
-from time import time
 import tensorflow as tf
 
 
-def normalize(img, scale=1, mean=[103.94, 116.78, 123.68], val=[0.017, 0.017, 0.017]):
+def normalize(img: np.array, scale: float = 1, mean=[103.94, 116.78, 123.68], val=[0.017, 0.017, 0.017]):
     img = img / scale
     return (img - mean) * val
 
 
-def blend(frame, alpha):
+def blend(frame: np.array, alpha: np.array):
     """Alpha blend frame with background"""
     background = np.zeros(frame.shape) + [0, 0, 0]
     alphargb = cv2.cvtColor(alpha, cv2.COLOR_GRAY2BGR)

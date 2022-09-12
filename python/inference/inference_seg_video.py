@@ -191,13 +191,10 @@ def main():
 
     # Target size
     tgt_size = 300
-
     # fps var to store FPS print
     fps = ""
-
     # filter var
     filter = None
-
     # threshold for pixel pred
     p_thres = 0.7
     bg_img_path = None
@@ -214,7 +211,8 @@ def main():
     cv2.namedWindow('portrait segmentation')
 
     # Create trackbars for background selection
-    cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4, partial(change_bgd, tgt_size=tgt_size))
+    cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4,
+                       partial(change_bgd, tgt_size=tgt_size))
 
     ret, frame = cap.read()
     while ret:
@@ -237,7 +235,7 @@ def main():
         simg = simg.reshape((1, in_height, in_width, 3)) / 255.0
 
         # Predict
-        out = model.predict(simg)
+        out = model.predict(simg, verbose=False)
         orimsk = np.float32((out > p_thres)).reshape((in_height, in_width, 1))
 
         # Post-process
