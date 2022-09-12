@@ -1,6 +1,6 @@
 # Fast Person Portrait Segmentation
 
-**Portrait segmentation** is segmenting a person in an image from the background. This is modeled as a **semantic segmentation** task to predict the label of every pixel (dense prediction) in an image.
+**Portrait segmentation** is task of segmenting a person in an image from the background. It is modeled as a **semantic segmentation** task to predict the label of every pixel (dense prediction) in an image.
 
 Here we limit the prediction to **binary classes** (person or background) and use only plain **portrait-selfie** images for matting. Experimentations with the following architectures for implementing a real-time portrait segmentation are discussed below:
 
@@ -9,45 +9,74 @@ Here we limit the prediction to **binary classes** (person or background) and us
 3.  Portrait-Net
 4.  Slim-Net
 
-The models were trained with standard(& custom) **portrait datasets** and their performance was compared using standard evaluation metrics and benchmarking tools. Finally, the models were deployed on **edge devices**, using popular embedded(mobile) machine-learning platforms for **real-time inference**.
+The models were trained with standard(& custom) **portrait datasets** and their performance was compared using standard evaluation metrics.
 
-_Note: This is a copy of the [Portrait Segmentation repo](https://github.com/anilsathyan7/Portrait-Segmentation) by Anil Sathyan_
-
-## Requirements
-
-python==3.7
-
--   mediapipe==0.8.6.2
--   opencv-python==4.5.3.56
--   openvino==2021.4.0
--   scipy==1.7.1
--   tensorflow==2.5.0; sys_platform == 'darwin'
--   tensorflow-gpu==2.5.0; sys_platform == 'linux' or sys_platform == 'Windows'
--   tensorflow_model_optimization==0.6.0
-
-_Note: conda_install.sh will install all the required dependencies_
-
-## Prerequisites
-
--   Download base training [data](https://drive.google.com/file/d/1UBLzvcqvt_fin9Y-48I_-lWQYfYpt_6J/view?usp=sharing)
--   Download caffe harmonization [model](https://drive.google.com/file/d/1bWafRdYBupr8eEuxSclIQpF7DaC_2MEY/view?usp=sharing)
--   Download portrait dataset [AISegment](https://datasetsearch.research.google.com/search?query=portrait%20segmentation&docid=O3kWsG%2FOg%2FZspufiAAAAAA%3D%3D) (Optional)
-
-## Pre-trained Weights
+## Pretrained Weights
 
 Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](<>)
 
-## Datasets
+## Running Person Segmentation
 
-The base training data consists of **18698 human portrait RGB images of size 128x128**, along with their **masks(ALPHA)**. Here we augment the [**PFCN**](https://1drv.ms/u/s!ApwdOxIIFBH19Ts5EuFd9gVJrKTo) dataset with (handpicked) portrait images from **supervisely** dataset. Additionally, we download **random selfie** images from web and generate their masks using the state-of-the-art **deeplab-xception** semantic segmentation model.
+### Setup:
 
-We then perform augmentations like **cropping, brightness alteration, flipping, curve filters, motion blur etc.** to increase dataset size and model robustness. Since most of our images contain plain background, we create new **synthetic images** using random backgrounds (natural) using the default dataset.
+Setup with python venv:
 
-Besides the above augmentations, we **normalize & standardize** the images and perform **run-time augmentations like flip, shift and zoom** using Keras data generator and preprocessing module.
+```shell
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-**AISegment**: It is a human matting dataset for **binary segmentation** of humans and the background. It is currently the largest portrait matting dataset, with **34,427 images** and corresponding mattes. The data set was marked by the Beijing Play Star Convergence Technology Co. Ltd., and the portrait soft segmentation model trained using this data has also been **commercialized**.
+Or setup with conda environment:
 
-**Dataset Links**
+```bash
+./conda_install.sh
+conda activate fastseg
+```
+
+### Inference with different models
+
+Tested with python 3.7, 3.8, 3.9
+
+Use `-h` to get all possible arguments. It is recommented to use the `--mt` flag for multi-threading to speed inference and custom install tensorflow with AVX and FMA enabled.
+
+```shell
+# Add necessary paths to env var
+export TF_XLA_FLAGS="--tf_xla_enable_xla_devices --tf_xla_auto_jit=2 --tf_xla_cpu_global_jit"
+export PYTHONPATH=${PYTHONPATH}:./
+export PYTHONPATH=${PYTHONPATH}:./utils/
+```
+
+```shell
+python inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam replacing bg with media/img/beach.jpg
+python inference/inference_openvino.py                # 30 FPS, Run the model using openvino inference engine
+python inference/inference_graphdef_pb.py             # 23 FPS, run model with tf v1 frozen graph inference
+python inference/inference_nosmoothed_with_slider.py  # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+python inference/inference_smoothed_with_slider.py    # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+python inference/inference_tflite.py                  # 25 FPS, Run the model using tflite interpreter
+python inference/inference_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
+python inference/inference_seg_video.py               # Apply blending filters on video
+python inference/inference_mediapipe.py               # mediapipe person segmentation
+python inference/inference_tflite_mult_channel_out.py # person segmentation with 2 channel tflite model, best perf
+```
+
+## Training and Evaluation
+
+### Datasets
+
+-   [Base training dataset](https://drive.google.com/file/d/1UBLzvcqvt_fin9Y-48I_-lWQYfYpt_6J/view?usp=sharing)
+
+    It consists of **18698 human portrait 128x129 RGB images**, along with their **alpha masks**. We augment the [**PFCN**](https://1drv.ms/u/s!ApwdOxIIFBH19Ts5EuFd9gVJrKTo) dataset with handpicked portrait images from **supervisely** dataset. Additionally, we downloaded **random selfie** images from web and generated their masks using the SOTA **deeplab-xception** semantic segmentation model.
+
+    We then perform augmentations like **cropping, brightness alteration, flipping, curve filters, motion blur etc.** to increase dataset size and model robustness. Since most of our images contain plain background, we create new **synthetic images** using random natural backgrounds using the default dataset.
+
+    Besides the above augmentations, we **normalize & standardize** the images and perform **run-time augmentations like flip, shift and zoom** using keras data generator and preprocessing module.
+
+-   [AISegment Portrait dataset ](https://datasetsearch.research.google.com/search?query=portrait%20segmentation&docid=O3kWsG%2FOg%2FZspufiAAAAAA%3D%3D)
+
+    It is a human matting dataset for **binary segmentation** of humans and the background. It is currently the largest portrait matting dataset, with **34,427 images** and corresponding matts. The dataset was marked by the Beijing Play Star Convergence Technology Co. Ltd., and the portrait soft segmentation model trained using this data has also been commercialized.
+
+**Supplemental Portrait Datasets**
 
 1.  [Portseg_128](https://drive.google.com/file/d/1UBLzvcqvt_fin9Y-48I_-lWQYfYpt_6J/view)
 2.  [Portrait_256](https://drive.google.com/file/d/1FQHaMrsFyxUv5AtwjfPD0gtmEVFM7w3X/view?usp=sharing)
@@ -61,7 +90,7 @@ Besides the above augmentations, we **normalize & standardize** the images and p
 
 ### Annotation Tools
 
-A [good dataset](https://hackernoon.com/stop-feeding-garbage-to-your-model-the-6-biggest-mistakes-with-datasets-and-how-to-avoid-them-3cb7532ad3b7) is always the first step for coming up with a robust and and accurate model, especially for semantic segmentation. There are many datasets available for portrait(person) segmentation like **PFCN, MSCOCO Person, PascalVOV Person, Supervisely** etc. But it seems that either the **quality or quantity** of the images are still insufficient for our use case. So, it would be a good idea to **collect custom images** for our training process. It takes a lot of time and effort for semantic segmentation annotation as compared to classification or detection.
+A [good dataset](https://hackernoon.com/stop-feeding-garbage-to-your-model-the-6-biggest-mistakes-with-datasets-and-how-to-avoid-them-3cb7532ad3b7) is always the first step for coming up with a robust and and accurate model, especially for semantic segmentation. There are many datasets available for portrait(person) segmentation like **PFCN, MSCOCO Person, PascalVOV Person, Supervisely** etc. But it seems that either the **quality or the quantity** of these images are still insufficient for our use case. So, it is recommented to **collect custom images** for our training. unfortunately, semantic segmentation annotation requiries a lot of effort and time as compared to classification or detection.
 
 Useful tools for **data annotation and collection**:
 
@@ -73,32 +102,17 @@ Useful tools for **data annotation and collection**:
 
 To use the model in mobile phones, it is important to include lots of **portrait images captured using mobile phones** in the dataset.
 
-## How to run
+### Running Training and evaluation
 
-### Set up a conda virtual environment and run the following:
-
-```bash
-$ bash conda_install.sh
-$ conda activate fastseg
-```
+Tested with python 3.7
 
 Download the **dataset** from the link above and put them in **data** folder. Then run the scripts in the **following order**:
 
-```bash
-$   python train.py # Train the model on data-set
-$   python eval.py checkpoints/<CHECKPOINT_PATH.hdf5> # Evaluate the model on test-set
-$   python export.py checkpoints/<CHECKPOINT_PATH.hdf5> # Export the model for deployment
-$   python test.py <TEST_IMAGE_PATH.jpg> # Test the model on a single image
-$   ./run_inference.sh inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam replacing bg with media/img/beach.jpg
-$   ./run_inference.sh inference/inference_openvino.py                # 30 FPS, Run the model using openvino inference engine
-$   ./run_inference.sh inference/inference_graphdef_pb.py             # 23 FPS, run model with tensorflow v1 frozen graph inference
-$   ./run_inference.sh inference/inference_nosmoothed_with_slider.py  # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-$   ./run_inference.sh inference/inference_smoothed_with_slider.py    # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-$   ./run_inference.sh inference/inference_tflite.py                  # 25 FPS, Run the model using tflite interpreter
-$   ./run_inference.sh inference/inference_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
-$   ./run_inference.sh inference/inference_seg_video.py               # Apply blending filters on video
-$   ./run_inference.sh inference/inference_mediapipe.py               # mediapipe person segmentation
-$   ./run_inference.sh inference/inference_tflite_mult_channel_out.py # person segmentation with 2 channel tflite model, best perf
+```shell
+python train.py # Train the model on data-set
+python eval.py checkpoints/<CHECKPOINT_PATH.hdf5> # Evaluate the model on test-set
+python export.py checkpoints/<CHECKPOINT_PATH.hdf5> # Export the model for deployment
+python test.py <TEST_IMAGE_PATH.jpg> # Test the model on a single image
 ```
 
 ## Mobile-Unet Architecture
