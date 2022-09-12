@@ -1,8 +1,9 @@
 import os
 import sys
+
 import tensorflow as tf
-from keras.layers import Flatten
-from keras.models import Model, load_model
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.models import Model, load_model
 from kito import reduce_keras_model  # Ensure kito is installed
 
 # Load the model (output of training - checkpoint)

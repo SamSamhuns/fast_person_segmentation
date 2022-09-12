@@ -57,7 +57,7 @@ data_mean, data_std = calc_mean_std(x_train)
 image_datagen = ImageDataGenerator(
     **data_gen_args, preprocessing_function=partial(normalize_batch, mean=data_mean, std=data_std))
 mask_datagen = ImageDataGenerator(
-    **data_gen_args,  preprocessing_function=partial(normalize_batch, mean=data_mean, std=data_std))
+    **data_gen_args, preprocessing_function=partial(normalize_batch, mean=data_mean, std=data_std))
 
 # Provide the same seed and keyword arguments to the fit and flow methods
 seed = 1

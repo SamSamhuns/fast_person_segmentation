@@ -26,7 +26,8 @@ class VideoStreamMTQueueWidget(object):
             src: path to video or 0 for webcam or other camera index
             maxsize: size of frame load Queue
         """
-        print(f"INFO: Setting up blocking queue multi-threading video IO from src {src}")
+        print(
+            f"INFO: Setting up blocking queue multi-threading video IO from src {src}")
         self.capture = cv2.VideoCapture(src)
         self.frame_queue = Queue(maxsize=maxsize)
         # immediately start a thread to read frames from the video stream
@@ -60,7 +61,8 @@ class VideoStreamMTNoQueueWidget(object):
         Args:
             src: path to video or 0 for webcam or other camera index
         """
-        print(f"INFO: Setting up no-queue multi-threading video IO from src {src}")
+        print(
+            f"INFO: Setting up no-queue multi-threading video IO from src {src}")
         self.capture = cv2.VideoCapture(src)
         self.status = self.capture.isOpened()
         # immediately start a thread to read frames from the video stream
@@ -120,31 +122,27 @@ def get_cmd_argparser(default_model="models/transpose_seg/deconv_bnoptimized_mun
     get a argparse.ArgumentParser object, must run parser.parse_args() to parse cmd args
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v',
-                        '--source_vid_path',
+    parser.add_argument('-v', '--source_vid_path',
                         type=str,
                         required=False,
                         help="""Source video on which person seg is run.
                         The default webcam is used is no path provided""")
-    parser.add_argument('-b',
-                        '--bg_img_path',
+    parser.add_argument('-b', '--bg_img_path',
                         type=str,
                         required=False,
                         help="""Path to image which will replace the background.
                                 A dark background is used is path is not provided""")
-    parser.add_argument('-m',
-                        '--model_path',
+    parser.add_argument('-m', '--model_path',
                         type=str,
                         required=False,
                         default=default_model,
-                        help="Path to inference model (i.e. h5/tflite/pb fmt)")
-    parser.add_argument('-mt',
-                        '--use_multi_thread',
+                        help="Path to inference model (default: %(default)s)")
+    parser.add_argument('--mt', '--use_multi_thread',
+                        dest="use_multi_thread",
                         action="store_true",
                         required=False,
-                        help="Flag to use multi_thread for opencv video io. Default is to use single thread")
-    parser.add_argument('-o',
-                        '--output_dir',
+                        help="Flag to use multi_thread for opencv video io. (default: %(default)s)")
+    parser.add_argument('-o', '--output_dir',
                         default=None,
                         help="Dir where inferenced video will be saved if path is not None")
     return parser

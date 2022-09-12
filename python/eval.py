@@ -1,7 +1,8 @@
-from keras.models import load_model
-from keras.optimizers import Adam
-import numpy as np
 import sys
+
+import numpy as np
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import load_model
 
 
 # Load a trained model checkpoint

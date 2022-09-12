@@ -1,8 +1,9 @@
 import sys
+import matplotlib.pyplot as plt
+
 import cv2
 import numpy as np
-from keras.models import load_model
-import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model
 
 # Load the model
 model = load_model('models/transpose_seg/deconv_bnoptimized_munet.h5')
