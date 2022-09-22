@@ -355,3 +355,4 @@ The **portrait-net and prisma-net** models were successfully converted to quanti
 -   [TF-TRT 2.0 Workflow With A SavedModel](https://docs.nvidia.com/deeplearning/frameworks/tf-trt-user-guide/index.html#worflow-with-savedmodel)
 -   [Awesome Tflite: Models, Samples, Tutorials, Tools & Learning Resources.](https://github.com/margaretmz/awesome-tflite)
 -   [Machinethink: New mobile neural network architectures](https://machinethink.net/blog/mobile-architectures/)
+-   Video gif in readme attributed to <https://www.youtube.com/watch?v=RZP6uJtgM34>

@@ -6,3 +6,6 @@
     -   Dockerized flask web-server with socketio
     -   Local flask web-server
 -   [aiortc_webserver](aiortc_webserver)
+
+
+![Portrait Segmentation](python/media/readme_images/portrait_segmentation.gif)
