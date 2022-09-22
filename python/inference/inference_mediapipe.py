@@ -1,26 +1,12 @@
 from time import time
-from enum import Enum
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
 import mediapipe as mp
 
-from utils.inference import get_cmd_argparser, load_bgd
-from utils.inference import get_video_stream_widget, ImageioVideoWriter
-
-
-class InferenceMode(Enum):
-    """Inference Mode
-    """
-    IMAGE = "image"
-    VIDEO = "video"
-
-
-class BackgroundMode(Enum):
-    """Background Mode
-    """
-    BLUR = "blur"
+from utils.inference import get_cmd_argparser, load_bgd, get_video_stream_widget
+from utils.inference import ImageioVideoWriter, PostProcessingType, BackgroundMode
 
 
 mp_drawing = mp.solutions.drawing_utils
@@ -29,44 +15,24 @@ mp_holistic = mp.solutions.holistic
 mp_objectron = mp.solutions.objectron
 
 
-def image_inference(image_path_list: str, thres: bool = 0.38):
-    MASK_COLOR = (255, 255, 255)  # white
-    with mp_selfie_segmentation.SelfieSegmentation(model_selection=0) as selfie_segmentation:
-
-        for idx, file in enumerate(image_path_list):
-            image = cv2.imread(file)
-            image_height, image_width, _ = image.shape
-            # Convert the BGR image to RGB before processing.
-            results = selfie_segmentation.process(
-                cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-
-            # Draw selfie segmentation on the background image.
-            # To improve segmentation around boundaries, consider applying a joint
-            # bilateral filter to "results.segmentation_mask" with "image".
-            condition = np.stack(
-                (results.segmentation_mask,) * 3, axis=-1) > thres
-            # Generate solid color images for showing the output selfie segmentation mask.
-            fg_image = np.zeros(image.shape, dtype=np.uint8)
-            fg_image[:] = MASK_COLOR
-            bg_image = np.zeros(image.shape, dtype=np.uint8)
-            output_image = np.where(condition, fg_image, bg_image)
-            cv2.imwrite(
-                f"/tmp/selfie_segmentation_output{str(idx)}.png", output_image)
-
-
-def video_inference(vid_path: str,
+def inference_video(vid_path: str,
                     bg_image_path: str,
                     bg_mode: Optional[BackgroundMode] = None,
+                    disp_wh_size: Tuple[int, int] = (1280, 720),
                     multi_thread: bool = False,
-                    thres: float = 0.8,
                     output_dir: Optional[str] = None):
     """
     vid_path: path to video file or use 0 for webcam
     """
+    post_processing = PostProcessingType.GAUSSIAN
+    default_threshold = 0.8
+    default_mopen_ksize = 7
+    default_mopen_iter = 9
+    default_gauss_ksize = 17
+    cv2_disp_name = "mediapipe_" + post_processing.name
+
     vid_path = 0 if vid_path is None else vid_path
-    disp_h, disp_w = 720, 1280
-    bg_image = load_bgd(bg_image_path, disp_w, disp_h,
-                        dtype=np.uint8, post_process=None)
+    disp_w, disp_h = disp_wh_size
 
     # check if multi-threading is to be used
     if multi_thread:
@@ -77,12 +43,15 @@ def video_inference(vid_path: str,
         vwriter = ImageioVideoWriter(output_dir, str(vid_path), __file__)
 
     ret, frame = cap.read()
+    frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    bg_image = load_bgd(bg_image_path, frame_w, frame_h,
+                        dtype=np.uint8, post_process=None)
     fps = ""
     # model_selection=1 uses landscape mode
     with mp_selfie_segmentation.SelfieSegmentation(model_selection=1) as selfie_segmentation:
         while ret:
             itime = time()
-            # for handling multi_threading load
             ret, frame = cap.read()
             if frame is None:
                 continue
@@ -94,7 +63,6 @@ def video_inference(vid_path: str,
             # pass by reference.
             image.flags.writeable = False
             results = selfie_segmentation.process(image)
-
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
@@ -102,23 +70,37 @@ def video_inference(vid_path: str,
             # To improve segmentation around boundaries, consider applying a joint
             # bilateral filter to "results.segmentation_mask" with "image".
             mask = results.segmentation_mask
-            # mask = cv2.GaussianBlur(mask, ksize=(17, 17), sigmaX=4, sigmaY=0)
 
-            condition = np.stack((mask,) * 3, axis=-1) > thres
-            # The background can be customized.
-            #   a) Load an image (with the same width and height of the input image) to
-            #      be the background, e.g., bg_image = cv2.imread('/path/to/image/file')
-            #   b) Blur the input image by applying image filtering, e.g.,
-            #      bg_image = cv2.GaussianBlur(image,(55,55),0)
+            # Mask PostProcessing
+            if post_processing == PostProcessingType.MORPH_OPEN:
+                kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
+                    default_mopen_ksize, default_mopen_ksize))
+                mask = cv2.morphologyEx(
+                    mask,
+                    cv2.MORPH_OPEN,
+                    kernel=kernel,
+                    iterations=default_mopen_iter)
+            elif post_processing == PostProcessingType.GAUSSIAN:
+                mask = cv2.GaussianBlur(
+                    mask,
+                    ksize=(default_gauss_ksize,
+                           default_gauss_ksize),
+                    sigmaX=4,
+                    sigmaY=0)
+
+            condition = np.stack((mask,) * 3, axis=-1) > default_threshold
+            # modify bg image if bg_mode set
             if bg_mode is not None:
                 if bg_mode == BackgroundMode.BLUR:
                     bg_image = cv2.GaussianBlur(image, (65, 65), 0)
+
             output_image = np.where(condition, image, bg_image)
+            output_image = cv2.resize(output_image, (disp_w, disp_h))
 
             # Display the resulting frame & FPS
             cv2.putText(output_image, fps, (disp_h - 180, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2, cv2.LINE_AA)
-            cv2.imshow('Selfie Segmentation', output_image)
+            cv2.imshow(cv2_disp_name, output_image)
             if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
             vwriter.write_frame(
@@ -129,19 +111,13 @@ def video_inference(vid_path: str,
         cv2.destroyAllWindows()
 
 
-def inference_model(mode, **kwargs):
-    if mode == InferenceMode.IMAGE:
-        image_inference(**kwargs)
-    elif mode == InferenceMode.VIDEO:
-        video_inference(**kwargs, bg_mode=None)
-
-
 def main():
     parser = get_cmd_argparser(default_model=None)
     args = parser.parse_args()
-    inference_model(mode=InferenceMode.VIDEO,
-                    vid_path=args.source_vid_path,
+    args.disp_wh_size = tuple(map(int, args.disp_wh_size))
+    inference_video(vid_path=args.source_vid_path,
                     bg_image_path=args.bg_img_path,
+                    disp_wh_size=args.disp_wh_size,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 

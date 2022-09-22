@@ -1,5 +1,5 @@
 from time import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -24,10 +24,11 @@ def get_openvino_core_net_exec(model_xml_path: str, model_bin_path: str, target_
     return OpenVinoIE, OpenVinoNetwork, OpenVinoExecutable
 
 
-def inference_model(vid_path: str,
+def inference_video(vid_path: str,
                     bg_img_path: str,
                     xml_model_path: str,
                     bin_model_path: str,
+                    disp_wh_size: Tuple[int, int] = (1280, 720),
                     multi_thread=True,
                     json_config_path: str = "models/model_info.json",
                     output_dir: Optional[str] = None):
@@ -37,8 +38,9 @@ def inference_model(vid_path: str,
     default_mopen_ksize = 7
     default_mopen_iter = 9
     default_gauss_ksize = 3
-    bg_h, bg_w = 513, 513
-    disp_h, disp_w = 720, 1200
+    bg_w, bg_h = 513, 513
+    disp_w, disp_h = disp_wh_size
+    cv2_disp_name = "openVINO_" + post_processing.name
 
     # Load Network and Executable
     OpenVinoIE, OpenVinoNetwork, OpenVinoExecutable = get_openvino_core_net_exec(
@@ -58,7 +60,6 @@ def inference_model(vid_path: str,
     # load video
     vid_path = 0 if vid_path is None else vid_path
 
-    cv2_disp_name = post_processing.name
     # check if multi-threading is to be used
     if multi_thread:
         cap = get_video_stream_widget(vid_path)
@@ -89,7 +90,8 @@ def inference_model(vid_path: str,
             msk = out[1, :, :]
         else:
             msk = np.float32(out).reshape((in_h, in_w, 1))
-        """ MORPH_OPEN SMOOTHING """
+
+        # Mask PostProcessing
         if post_processing == PostProcessingType.MORPH_OPEN:
             kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
                 default_mopen_ksize, default_mopen_ksize))
@@ -97,9 +99,7 @@ def inference_model(vid_path: str,
                                    cv2.MORPH_OPEN,
                                    kernel=kernel,
                                    iterations=default_mopen_iter)
-
-        """ GAUSSIAN SMOOTHING """
-        if post_processing == PostProcessingType.GAUSSIAN:
+        elif post_processing == PostProcessingType.GAUSSIAN:
             msk = cv2.GaussianBlur(msk,
                                    ksize=(default_gauss_ksize,
                                           default_gauss_ksize),
@@ -137,10 +137,12 @@ def main():
         default="models/transpose_seg_openvino/deconv_bnoptimized_munet_e260_openvino/deconv_bnoptimized_munet_e260.bin",
         help="Path to inference model (default: %(default)s)")
     args = parser.parse_args()
-    inference_model(vid_path=args.source_vid_path,
+    args.disp_wh_size = tuple(map(int, args.disp_wh_size))
+    inference_video(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     xml_model_path=args.model_xml,
                     bin_model_path=args.model_bin,
+                    disp_wh_size=args.disp_wh_size,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 

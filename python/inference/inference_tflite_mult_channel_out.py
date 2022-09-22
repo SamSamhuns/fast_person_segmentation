@@ -1,5 +1,5 @@
 from time import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -12,6 +12,7 @@ from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_st
 def inference_model(vid_path: str,
                     bg_img_path: str,
                     tflite_model_path: str,
+                    disp_wh_size: Tuple[int, int] = (1280, 720),
                     multi_thread: bool = True,
                     output_dir: Optional[str] = None):
     # choose parameters
@@ -21,8 +22,9 @@ def inference_model(vid_path: str,
     default_mopen_ksize = 7
     default_mopen_iter = 9
     default_gauss_ksize = 5
-    bg_h, bg_w = 513, 513
-    disp_h, disp_w = 720, 1200
+    bg_w, bg_h = 513, 513
+    disp_w, disp_h = disp_wh_size
+    cv2_disp_name = "tflite_mult_channel_" + post_processing.name
 
     # Load background image, if path is None, use dark background
     def post_process_bg_img(img):
@@ -41,7 +43,6 @@ def inference_model(vid_path: str,
     input_node, output_node = input_details[0]['index'], output_details[0]['index']
 
     in_h, in_w = input_shape[0], input_shape[1]
-    cv2_disp_name = post_processing.name
     # check if multi-threading is to be used
     if multi_thread:
         cap = get_video_stream_widget(vid_path)
@@ -100,7 +101,7 @@ def inference_model(vid_path: str,
                     (1.0 - combine_with_prev_ratio) * msk
             prev_mask = msk
 
-        """ MORPH_OPEN SMOOTHING """
+        # Mask PostProcessing
         if post_processing == PostProcessingType.MORPH_OPEN:
             # since we are post-processing the bg mask
             if chosen_channel == "background":
@@ -112,9 +113,7 @@ def inference_model(vid_path: str,
                                    cv2.MORPH_OPEN,
                                    kernel=kernel,
                                    iterations=default_mopen_iter)
-
-        """ GAUSSIAN SMOOTHING """
-        if post_processing == PostProcessingType.GAUSSIAN:
+        elif post_processing == PostProcessingType.GAUSSIAN:
             # since we are post-processing the bg mask
             if chosen_channel == "background":
                 msk = cv2.dilate(msk, np.ones((5, 5), dtype=np.uint8),
@@ -145,9 +144,11 @@ def main():
     parser = get_cmd_argparser(
         default_model="models/selfie_seg/144x256/model_float32.tflite")
     args = parser.parse_args()
+    args.disp_wh_size = tuple(map(int, args.disp_wh_size))
     inference_model(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     tflite_model_path=args.model_path,
+                    disp_wh_size=args.disp_wh_size,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 

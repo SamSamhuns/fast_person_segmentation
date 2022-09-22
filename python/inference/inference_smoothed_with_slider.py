@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 from time import time
 
 from tensorflow.keras.models import load_model
@@ -13,9 +13,10 @@ def nothing(x) -> None:
     pass
 
 
-def inference_model(vid_path: str,
+def inference_video(vid_path: str,
                     bg_img_path: str,
                     model_path: str,
+                    disp_wh_size: Tuple[int, int] = (1280, 720),
                     multi_thread: str = True,
                     json_config_path: str = "models/model_info.json",
                     output_dir: Optional[str] = None):
@@ -24,8 +25,9 @@ def inference_model(vid_path: str,
     default_skip_frame = 0
     default_mopen_ksize = 7
     default_mopen_iter = 2
-    bg_h, bg_w = 360, 640             # background height & width
-    disp_h, disp_w = 720, 1280        # final display screen width and height
+    bg_w, bg_h = 640, 360
+    disp_w, disp_h = disp_wh_size
+    cv2_disp_name = "tf_keras_smoothed_slider"
 
     # load model config from json file
     config_dict = get_config_dict(model_path, json_config_path)
@@ -41,7 +43,6 @@ def inference_model(vid_path: str,
     msk = None  # mask variable to store previous masked state
     COUNT = 0   # should always be set to 0
 
-    cv2_disp_name = "new_morph_smooth"
     cv2.namedWindow(cv2_disp_name)
     # create trackbars for gaussian kernel
     cv2.createTrackbar('threshold', cv2_disp_name,
@@ -117,9 +118,11 @@ def inference_model(vid_path: str,
 def main():
     parser = get_cmd_argparser()
     args = parser.parse_args()
-    inference_model(vid_path=args.source_vid_path,
+    args.disp_wh_size = tuple(map(int, args.disp_wh_size))
+    inference_video(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     model_path=args.model_path,
+                    disp_wh_size=args.disp_wh_size,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 

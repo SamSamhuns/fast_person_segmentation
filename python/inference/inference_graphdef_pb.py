@@ -1,5 +1,5 @@
 from time import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import cv2
 import numpy as np
@@ -11,10 +11,11 @@ from utils.inference import PostProcessingType, ImageioVideoWriter, get_video_st
 tf.config.optimizer.set_jit(True)
 
 
-def inference_model(vid_path: str,
+def inference_video(vid_path: str,
                     bg_img_path: str,
                     pb_model_path: str,
                     json_config_path: str = "models/model_info.json",
+                    disp_wh_size: Tuple[int, int] = (1280, 720),
                     multi_thread: bool = True,
                     output_dir: Optional[str] = None):
     # choose parameters
@@ -24,7 +25,8 @@ def inference_model(vid_path: str,
     default_mopen_iter = 9
     default_gauss_ksize = 3
     bg_h, bg_w = 513, 513
-    disp_h, disp_w = 720, 1200
+    disp_w, disp_h = disp_wh_size
+    cv2_disp_name = "GraphDef_pb_" + post_processing.name
 
     # load model config from json file
     config_dict = get_config_dict(pb_model_path, json_config_path)
@@ -58,7 +60,6 @@ def inference_model(vid_path: str,
 
     with tf.compat.v1.Session() as sess:
         prob_tensor = sess.graph.get_tensor_by_name(output_layer)
-        cv2_disp_name = post_processing.name
 
         # check if multi-threading is to be used
         if multi_thread:
@@ -86,7 +87,8 @@ def inference_model(vid_path: str,
                 msk = np.float32(out).reshape((in_h, in_w, 2))[:, :, 1]
             else:
                 msk = np.float32(out).reshape((in_h, in_w, 1))
-            """ MORPH_OPEN SMOOTHING """
+
+            # Mask PostProcessing
             if post_processing == PostProcessingType.MORPH_OPEN:
                 kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
                     default_mopen_ksize, default_mopen_ksize))
@@ -94,9 +96,7 @@ def inference_model(vid_path: str,
                                        cv2.MORPH_OPEN,
                                        kernel=kernel,
                                        iterations=default_mopen_iter)
-
-            """ GAUSSIAN SMOOTHING """
-            if post_processing == PostProcessingType.GAUSSIAN:
+            elif post_processing == PostProcessingType.GAUSSIAN:
                 msk = cv2.GaussianBlur(msk,
                                        ksize=(default_gauss_ksize,
                                               default_gauss_ksize),
@@ -125,9 +125,11 @@ def main():
     parser = get_cmd_argparser(
         default_model="models/transpose_seg/deconv_bnoptimized_munet_e260.pb")
     args = parser.parse_args()
-    inference_model(vid_path=args.source_vid_path,
+    args.disp_wh_size = tuple(map(int, args.disp_wh_size))
+    inference_video(vid_path=args.source_vid_path,
                     bg_img_path=args.bg_img_path,
                     pb_model_path=args.model_path,
+                    disp_wh_size=args.disp_wh_size,
                     multi_thread=args.use_multi_thread,
                     output_dir=args.output_dir)
 
