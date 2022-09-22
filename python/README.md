@@ -13,7 +13,7 @@ The models were trained with standard(& custom) **portrait datasets** and their 
 
 ## Pretrained Weights
 
-Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](<>)
+Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp/view?usp=sharing)
 
 ## Running Person Segmentation
 
@@ -38,7 +38,7 @@ conda activate fastseg
 
 Tested with python 3.7, 3.8, 3.9
 
-Use `-h` to get all possible arguments. It is recommented to use the `--mt` flag for multi-threading to speed inference and custom install tensorflow with AVX and FMA enabled.
+Use `-h` to get all possible arguments. It is recommended to use the `--mt` flag for multi-threading to speed inference and build `Tensorflow` locally with AVX and FMA enabled.
 
 ```shell
 # Add necessary paths to env var
@@ -48,16 +48,14 @@ export PYTHONPATH=${PYTHONPATH}:./utils/
 ```
 
 ```shell
-python inference/inference_minimal.py -b media/img/beach.jpg # Run the model on webcam replacing bg with media/img/beach.jpg
-python inference/inference_openvino.py                # 30 FPS, Run the model using openvino inference engine
-python inference/inference_graphdef_pb.py             # 23 FPS, run model with tf v1 frozen graph inference
-python inference/inference_nosmoothed_with_slider.py  # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-python inference/inference_smoothed_with_slider.py    # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
-python inference/inference_tflite.py                  # 25 FPS, Run the model using tflite interpreter
-python inference/inference_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
-python inference/inference_seg_video.py               # Apply blending filters on video
-python inference/inference_mediapipe.py               # mediapipe person segmentation
-python inference/inference_tflite_mult_channel_out.py # person segmentation with 2 channel tflite model, best perf
+python inference/run_openvino.py                # 30 FPS, Run the model using openvino inference engine
+python inference/run_graphdef_pb.py             # 23 FPS, run model with tf v1 frozen graph inference
+python inference/run_smoothed_with_slider.py    # 10 FPS, run model with hdf5 inference & sliders for changing frame skip, smoothing
+python inference/run_tflite.py                  # 25 FPS, Run the model using tflite interpreter
+python inference/run_portrait_video_tflite.py   #  8 FPS, Use portrait-net for video segmentation
+python inference/run_mediapipe.py               # 30 FPS, mediapipe person segmentation
+python inference/run_seg_video.py               # Apply blending filters on video
+python inference/run_tflite_mult_channel_out.py # person segmentation with 2 channel tflite model, best perf
 ```
 
 ## Training and Evaluation
@@ -114,6 +112,8 @@ python eval.py checkpoints/<CHECKPOINT_PATH.hdf5> # Evaluate the model on test-s
 python export.py checkpoints/<CHECKPOINT_PATH.hdf5> # Export the model for deployment
 python test.py <TEST_IMAGE_PATH.jpg> # Test the model on a single image
 ```
+
+# Documentation
 
 ## Mobile-Unet Architecture
 
@@ -240,7 +240,7 @@ As an additional step, we will see how we can **send the output video to an exte
 
 Once you install and configure the openVINO inference engine and model optimizer, you can directly **convert the Tensorflow deeplab model** with a single command:
 
-    python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model frozen_inference_graph.pb --output SemanticPredictions --input ImageTensor --input_shape "(1,513,513,3)"
+    python3 /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model frozen_run_graph.pb --output SemanticPredictions --input ImageTensor --input_shape "(1,513,513,3)"
 
 ### Segmentation via Background Subtraction: A Naive Approach
 
@@ -270,11 +270,11 @@ Here are some **advanced** techniques to improve the **accuracy, speed and robus
 1.  **PortraitNet: Real-time portrait segmentation network for mobile device**
 2.  **Real-time Hair Segmentation and Recoloring on Mobile GPUs**
 
-**Boundary Loss**: In order to improve the boundary accuracy and sharpness, we modify the last layer in the decoder module by adding a new convolution layer in parallel to generate a **boundary detection map**. We generate the boundary ground truth from manual labeled mask using traditional edge detection algorithm like **canny** or sobel, on-the-fly. Also, we need to use **focal loss** instead of BCE, for training the network with boundary masks. Finally, we can remove this additional convolution layer for edges and export the model for inference.
+**Boundary Loss**: In order to improve the boundary accuracy and sharpness, we modify the last layer in the decoder module by adding a new convolution layer in parallel to generate a **boundary detection map**. We generate the boundary ground truth from manual labeled mask using traditional edge detection algorithm like **canny** or Sobel, on-the-fly. Also, we need to use **focal loss** instead of BCE, for training the network with boundary masks. Finally, we can remove this additional convolution layer for edges and export the model for inference.
 
-**Consistency Constraint Loss**: A novel method to generate soft labels using the tiny network itself with data augmentation, where we use **KL divergence** between the heatmap outputs of the original image and texture enhanced image, for training the model. It further improves the accuracy and **robustness** of the model under various **lighting** conditions.
+**Consistency Constraint Loss**: A novel method to generate soft labels using the tiny network itself with data augmentation, where we use **KL divergence** between the heat-map outputs of the original image and texture enhanced image, for training the model. It further improves the accuracy and **robustness** of the model under various **lighting** conditions.
 
-**Refined Decoder Module**: The decoder module consists of refined residual block with **depthwise convolution** and up-sampling blocks with transpose convolution. Even though  it includes the skip connections similar to unet architecture, they are **added** to the layers in decoder module channel-wise instead of usual concatenation. Overall, this improves the execution **speed** of the model.
+**Refined Decoder Module**: The decoder module consists of refined residual block with **depthwise convolution** and up-sampling blocks with transpose convolution. Even though  it includes the skip connections similar to UNET architecture, they are **added** to the layers in decoder module channel-wise instead of usual concatenation. Overall, this improves the execution **speed** of the model.
 
 **Temporal Consistency**: A video model should exhibit **temporal redundancy** across adjacent frames. Since the neighboring frames are similar, their corresponding segmentation masks should also be similar(ideally). Current methods that utilize LSTM, GRU(Deep) or Optical flow(Classic) to realize this are too computationally expensive for real-time applications on mobile phones. So, to leverage this temporal redundancy, we append the segmentation output of the **previous frame** as the **fourth channel(prior)** of the current input frame during inference. During training, we can apply techniques like **affine transformations, thin plate spline smoothing, motion blur** etc. on the annotated ground truth to use it as a previous-mask. Also, to make sure that the model robustly handles all the use cases, we must also train it using an **empty previous mask**.
 
