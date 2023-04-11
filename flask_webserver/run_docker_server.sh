@@ -1,5 +1,7 @@
 #!/bin/bash
 
+def_cont_name=pseg_wcam_server_cont
+
 # check for 2 cmd args
 if [ $# -ne 2 ]
   then
@@ -18,11 +20,19 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
+# Check if the container is running
+if [ "$(docker ps -q -f name=$def_cont_name)" ]; then
+    # Stop the container
+    echo "Stopping docker container '$def_cont_name'"
+    docker stop "$def_cont_name"
+    echo "Stopped container '$def_cont_name'"
+fi
+
 echo "Running docker with exposed fast api http port: $http"
 
 docker run \
       --rm \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
-      --name pseg_wcam_server_cont \
+      --name "$def_cont_name" \
       -p $http:8080 \
       pseg_wcam_server:latest
