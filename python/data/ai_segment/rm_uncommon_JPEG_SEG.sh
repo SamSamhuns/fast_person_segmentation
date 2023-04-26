@@ -1,3 +1,5 @@
+#!/bin/bash
+
 for file in clip_img_OUT/*
 do
 filestr=`basename $file`
