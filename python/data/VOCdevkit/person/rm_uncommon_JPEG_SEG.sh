@@ -1,3 +1,5 @@
+#!/bin/bash
+
 for file in JPEGImages/*
 do
 filestr=`basename $file`
