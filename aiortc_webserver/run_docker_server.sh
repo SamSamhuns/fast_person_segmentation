@@ -33,5 +33,5 @@ echo "Running docker with exposed fast api http port: $http"
 docker run --rm -d \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
       --name "$def_cont_name" \
-      -p $http:8080 \
+      -p 0.0.0.0:$http:8080 \
       pseg_wcam_aiortc_server:latest
