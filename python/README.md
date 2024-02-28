@@ -11,10 +11,6 @@ Here we limit the prediction to **binary classes** (person or background) and us
 
 The models were trained with standard(& custom) **portrait datasets** and their performance was compared using standard evaluation metrics.
 
-## Pretrained Weights
-
-Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp/view?usp=sharing)
-
 ## Running Person Segmentation
 
 ### Setup:
@@ -32,6 +28,17 @@ Or setup with conda environment:
 ```bash
 ./conda_install.sh
 conda activate fastseg
+```
+
+### Pretrained Weights
+
+Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp/view?usp=sharing) and unzipped under models or unzipped with the following commands.
+
+```shell
+pip install gdown
+gdown 19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp
+unzip models.zip
+rm models.zip
 ```
 
 ### Inference with different models

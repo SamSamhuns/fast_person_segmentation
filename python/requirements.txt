@@ -1,9 +1,9 @@
-imageio==2.21.3
-imageio-ffmpeg==0.4.7
-mediapipe==0.8.11
-opencv-python==4.6.0.66
-scipy==1.9.1
-tensorflow==2.7.4; sys_platform == 'darwin'
-tensorflow-gpu==2.7.4; sys_platform == 'linux' or sys_platform == 'Windows'
-tensorflow-model-optimization==0.7.3
-openvino
+imageio==2.34.0
+imageio-ffmpeg==0.4.9
+mediapipe==0.10.9
+opencv-python==4.9.0.80
+openvino==2023.3.0
+scipy==1.12.0
+tensorflow==2.13.1; sys_platform == 'darwin'
+# tensorflow-gpu==2.7.4; sys_platform == 'linux' or sys_platform == 'Windows'
+tensorflow-model-optimization==0.8.0
