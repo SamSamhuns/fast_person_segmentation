@@ -20,8 +20,9 @@
 
   <script src="static/socket.io.min.js"></script>
   <script src="static/html_video_capture.js"></script>
-  <script>
-    var socket = io('http://localhost:8080');
+  <script type="text/javascript">
+    var socket = io('http://localhost:{{ port|tojson }}');
+    console.log('Socket connected to: http://localhost:{{ port|tojson }}')
 
     socket.on('connect', function() {
       console.log("Connected...!", socket.connected)

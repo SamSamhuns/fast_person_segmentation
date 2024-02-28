@@ -1,21 +1,24 @@
 import io
-import cv2
+import os
 import base64
 import argparse
+
+import cv2
 import numpy as np
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from cv_client.selfie_segmentation import SelfieSegmentation
 
 
+PORT = None
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 segmentor = SelfieSegmentation(tflite_model_path="cv_client/selfie_segmentation/weights/model_float16_quant.tflite")
 
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
-    return render_template('index_socketio.html')
+    return render_template('index_socketio.html', port=int(PORT))
 
 
 @socketio.on('image')
@@ -29,12 +32,14 @@ def image(data_image):
 
     # Process the image frame
     disp_wh = (500, 375)
-    frame = segmentor.segment_frame(frame, disp_wh)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    stringData = ''
+    if frame is not None:
+        frame = segmentor.segment_frame(frame, disp_wh)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    imgencode = cv2.imencode('.jpg', frame)[1]
-    # base64 encode
-    stringData = base64.b64encode(imgencode).decode('utf-8')
+        imgencode = cv2.imencode('.jpg', frame)[1]
+        # base64 encode
+        stringData = base64.b64encode(imgencode).decode('utf-8')
     b64_src = 'data:image/jpg;base64,'
     stringData = b64_src + stringData
 
@@ -47,9 +52,11 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--ip", type=str, default="0.0.0.0",
                         help="ip address of the device. Default: 0.0.0.0")
     parser.add_argument("-o", "--port", type=int, default=8080,
-                        help="ephemeral port number of the server (1024 to 65535). Default: 8000")
+                        help="ephemeral port number of the server (1024 to 65535). Default: 8080")
     parser.add_argument("-bg", "--bgd_img_path", type=str,
                         help="background image path. If not provided, use a dark background")
     args = parser.parse_args()
+
+    PORT = os.getenv('HTTP_PORT', args.port)
     segmentor.load_new_bgd(args.bgd_img_path)
     socketio.run(app=app, host=args.ip, port=args.port)
