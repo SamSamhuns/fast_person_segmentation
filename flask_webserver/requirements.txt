@@ -1,6 +1,7 @@
-eventlet==0.31.1
-Flask==2.0.1
-Flask-SocketIO==5.1.1
-imageio==2.9.0
-opencv-contrib-python==4.5.3.56
-tensorflow==2.6.0
+eventlet==0.35.2
+Flask==3.0.2
+Flask-SocketIO==5.3.6
+imageio==2.34.0
+opencv-contrib-python==4.9.0.80
+tensorflow==2.13.1; sys_platform == 'darwin'
+tensorflow[and-cuda]==2.13.1; sys_platform == 'linux' or sys_platform == 'Windows'
