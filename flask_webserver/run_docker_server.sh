@@ -35,4 +35,5 @@ docker run \
       --shm-size=1g --ulimit memlock=-1 --ulimit stack=67108864 \
       --name "$def_cont_name" \
       -p $http:8080 \
+      --env HTTP_PORT=$http \
       pseg_wcam_server:latest
