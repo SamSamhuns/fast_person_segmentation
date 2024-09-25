@@ -32,11 +32,11 @@ conda activate fastseg
 
 ### Pretrained Weights
 
-Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp/view?usp=sharing) and unzipped under models or unzipped with the following commands.
+Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downloaded from this [Google Drive Link](https://drive.google.com/file/d/1AKgyCZX04Tm9ecXIaOBvi-8yTGcMmMkz/view?usp=sharing) and unzipped under models or unzipped with the following commands.
 
 ```shell
 pip install gdown
-gdown 19lni0lm0qa0VPJPAs-8WbpMWwU77FmSp
+gdown 1AKgyCZX04Tm9ecXIaOBvi-8yTGcMmMkz
 unzip models.zip
 rm models.zip
 ```
