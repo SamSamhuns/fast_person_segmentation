@@ -18,7 +18,9 @@ ROOT = os.path.dirname(__file__)
 
 logger = logging.getLogger("pc")
 pcs = set()
-segmentor = SelfieSegmentation(tflite_model_path="cv_client/selfie_segmentation/weights/model_float16_quant.tflite")
+segmentor = SelfieSegmentation(
+    tflite_model_path="cv_client/selfie_segmentation/weights/model_float16_quant.tflite"
+)
 
 
 class VideoTransformTrack(MediaStreamTrack):
@@ -91,8 +93,7 @@ class VideoTransformTrack(MediaStreamTrack):
             # rotate image
             img = frame.to_ndarray(format="bgr24")
             rows, cols, _ = img.shape
-            M = cv2.getRotationMatrix2D(
-                (cols / 2, rows / 2), frame.time * 45, 1)
+            M = cv2.getRotationMatrix2D((cols / 2, rows / 2), frame.time * 45, 1)
             img = cv2.warpAffine(img, M, (cols, rows))
 
             # rebuild a VideoFrame, preserving timing information
@@ -190,16 +191,20 @@ async def on_shutdown(app):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="WebRTC audio / video / data-channels"
-    )
+    parser = argparse.ArgumentParser(description="WebRTC audio / video / data-channels")
     parser.add_argument("--cert-file", help="SSL certificate file (for HTTPS)")
     parser.add_argument("--key-file", help="SSL key file (for HTTPS)")
-    parser.add_argument("--port", type=int, default=8080, help="HTTP server port (default: 8080)")
+    parser.add_argument(
+        "--port", type=int, default=8080, help="HTTP server port (default: 8080)"
+    )
     parser.add_argument("--verbose", "-v", action="count")
     parser.add_argument("--write-audio", help="Write received audio to a file")
-    parser.add_argument("-bg", "--bgd_img_path", type=str,
-                        help="background image path. If not provided, use a dark background")
+    parser.add_argument(
+        "-bg",
+        "--bgd_img_path",
+        type=str,
+        help="background image path. If not provided, use a dark background",
+    )
     args = parser.parse_args()
     # load new bgd for segmentor if provided
     segmentor.load_new_bgd(args.bgd_img_path)

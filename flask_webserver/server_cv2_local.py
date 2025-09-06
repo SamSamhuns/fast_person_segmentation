@@ -21,14 +21,17 @@ app = Flask(__name__)
 if use_picam:
     install_pip_package("imutils")
     import imutils
+
     vstream = imutils.VideoStream(usePiCamera=1).start()
 else:
     vstream = VideoStreamMT(src=0)
 sleep(2.0)
 
 
-def segment_video_stream(bg_img_path=None,
-                         tflite_model_path="cv_client/selfie_segmentation/weights/model_float16_quant.tflite"):
+def segment_video_stream(
+    bg_img_path=None,
+    tflite_model_path="cv_client/selfie_segmentation/weights/model_float16_quant.tflite",
+):
     """
     loops over frames from video stream
     segments person silhouettes
@@ -53,18 +56,32 @@ def segment_video_stream(bg_img_path=None,
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         # grab the current timestamp and draw it on the frame
         timestamp = datetime.datetime.now()
-        cv2.putText(frame, timestamp.strftime(
-            "%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+        cv2.putText(
+            frame,
+            timestamp.strftime("%A %d %B %Y %I:%M:%S%p"),
+            (10, frame.shape[0] - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.35,
+            (0, 0, 255),
+            1,
+        )
 
         # draw info on frame
-        cv2.putText(frame, fps, (disp_h - 180, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(
+            frame,
+            fps,
+            (disp_h - 180, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (0, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
         # acquire the lock, set the output frame, and release the lock
         # ensures output_frame is not written on while its being read
         with lock:
             output_frame = frame.copy()
-        fps = f"FPS: {1/(time() - t1):.1f}"
+        fps = f"FPS: {1 / (time() - t1):.1f}"
 
 
 def generate():
@@ -85,8 +102,10 @@ def generate():
             if not flag:
                 continue
         # yield the output frame in the byte format
-        yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' +
-              bytearray(encodedImage) + b'\r\n')
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" + bytearray(encodedImage) + b"\r\n"
+        )
 
 
 @app.route("/")
@@ -98,27 +117,39 @@ def index():
 def video_feed():
     # return the response generated along with the specific media
     # type (mime type)
-    return Response(generate(),
-                    mimetype="multipart/x-mixed-replace; boundary=frame")
+    return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
 # check to see if this is the main thread of execution
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser("Flask webserver with socketIO")
-    parser.add_argument("-i", "--ip", type=str, default="0.0.0.0",
-                        help="ip address of the device. Default: 0.0.0.0")
-    parser.add_argument("-o", "--port", type=int, default=8080,
-                        help="ephemeral port number of the server (1024 to 65535). Default: 8000")
-    parser.add_argument("-bg", "--bgd_img_path", type=str,
-                        help="background image path. If not provided, use a dark background")
+    parser.add_argument(
+        "-i",
+        "--ip",
+        type=str,
+        default="0.0.0.0",
+        help="ip address of the device. Default: 0.0.0.0",
+    )
+    parser.add_argument(
+        "-o",
+        "--port",
+        type=int,
+        default=8080,
+        help="ephemeral port number of the server (1024 to 65535). Default: 8000",
+    )
+    parser.add_argument(
+        "-bg",
+        "--bgd_img_path",
+        type=str,
+        help="background image path. If not provided, use a dark background",
+    )
     args = parser.parse_args()
     # start a thread that will perform person segmentation
     t = threading.Thread(target=segment_video_stream, args=(args.bgd_img_path,))
     t.daemon = True
     t.start()
     # start the flask app
-    app.run(host=args.ip, port=args.port, debug=True,
-            threaded=True, use_reloader=False)
+    app.run(host=args.ip, port=args.port, debug=True, threaded=True, use_reloader=False)
 
 # release the video stream pointer
 vstream.release()

@@ -11,8 +11,8 @@ import sys
 
 
 class PostProcessingType(Enum):
-    """Post_Processing methods
-    """
+    """Post_Processing methods"""
+
     GAUSSIAN = "gaussian"
     MORPH_OPEN = "morph_open"
 
@@ -35,7 +35,7 @@ class VideoStreamMT(object):
                 self.status, self.frame = self.capture.read()
             else:
                 return
-            sleep(.005)
+            sleep(0.005)
 
     def read(self):
         return self.status, self.frame
@@ -45,7 +45,6 @@ class VideoStreamMT(object):
 
 
 class ImageioVideoWriter(object):
-
     def __init__(self, output_dir, video_name, model_fname, fps=25):
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         video_name = Path(model_fname).stem + Path(video_name).stem + ".mp4"
@@ -69,11 +68,13 @@ def install_pip_package(package):
 
 
 def _default_bg_load_transform(img):
-    """ Convert to RGB space and normlize to [0,1] range """
+    """Convert to RGB space and normlize to [0,1] range"""
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB) / 255.0
 
 
-def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg_load_transform):
+def load_bgd(
+    bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg_load_transform
+):
     """
     loads & preprocesses bg img
     if bg_img_path is None, return a black image image
@@ -81,8 +82,7 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg
     if bg_img_path is None:
         bgd = np.zeros([bg_h, bg_w, 3], dtype=dtype)
     elif isinstance(bg_img_path, str) and Path(bg_img_path).is_file():
-        bgd = cv2.resize(cv2.imread(bg_img_path),
-                         (bg_w, bg_h)).astype(dtype)
+        bgd = cv2.resize(cv2.imread(bg_img_path), (bg_w, bg_h)).astype(dtype)
         if post_process is not None:
             bgd = post_process(bgd)
     else:
@@ -90,12 +90,13 @@ def load_bgd(bg_img_path, bg_w, bg_h, dtype=np.float32, post_process=_default_bg
     return bgd
 
 
-def get_frame_after_postprocess(msk, img, bgd, bg_wh, disp_wh, threshold, foreground="img"):
+def get_frame_after_postprocess(
+    msk, img, bgd, bg_wh, disp_wh, threshold, foreground="img"
+):
     bg_w, bg_h = bg_wh
     disp_w, disp_h = disp_wh
     # resize mask to bg size and apply thres
-    msk = cv2.resize(msk, (bg_w, bg_h)).reshape(
-        (bg_h, bg_w, 1)) > threshold
+    msk = cv2.resize(msk, (bg_w, bg_h)).reshape((bg_h, bg_w, 1)) > threshold
     img = cv2.resize(img, (bg_w, bg_h))
     # alpha blending: frame = (img * msk) + (bgd * (1 - msk))
     if foreground == "img":

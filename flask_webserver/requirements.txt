@@ -1,7 +1,6 @@
-eventlet==0.35.2
+eventlet==0.40.3
 Flask==3.0.2
 Flask-SocketIO==5.3.6
 imageio==2.34.0
 opencv-contrib-python==4.9.0.80
-tensorflow==2.13.1; sys_platform == 'darwin'
-tensorflow[and-cuda]==2.13.1; sys_platform == 'linux' or sys_platform == 'Windows'
+tensorflow==2.13.1
