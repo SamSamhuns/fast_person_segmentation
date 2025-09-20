@@ -3,7 +3,7 @@ import cv2
 import glob
 
 # Configure input and output directory paths
-source_mask_list = glob.glob('/path/to/source/Labels/*.*', recursive=True)
+source_mask_list = glob.glob("/path/to/source/Labels/*.*", recursive=True)
 target_mask_path = "/path/to/target/Labels/"
 
 # Set foreground pixel value and target image size

@@ -6,7 +6,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 
 # Load the model
-model = load_model('models/transpose_seg/deconv_bnoptimized_munet.h5')
+model = load_model("models/transpose_seg/deconv_bnoptimized_munet.h5")
 
 # Load a test image
 im = cv2.imread(sys.argv[1])

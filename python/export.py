@@ -27,14 +27,16 @@ new_model.save(f"{save_dir}/{model_out}_fin.h5")
 
 # For Float32 Model
 converter = tf.lite.TFLiteConverter.from_keras_model_file(
-    f"{save_dir}/{model_out}_fin.h5")
+    f"{save_dir}/{model_out}_fin.h5"
+)
 tflite_model = converter.convert()
 open(f"{save_dir}/{model_out}_fin.tflite", "wb").write(tflite_model)
 
 
 # For UINT8 Quantization
 converter = tf.lite.TFLiteConverter.from_keras_model_file(
-    f"{save_dir}/{model_out}_fin.h5")
+    f"{save_dir}/{model_out}_fin.h5"
+)
 # converter.optimizations = [tf.lite.Optimize.OPTIMIZE_FOR_SIZE]
 converter.post_training_quantize = True
 tflite_model = converter.convert()
@@ -44,7 +46,8 @@ open(f"{save_dir}/{model_out}_fin_uint8.tflite", "wb").write(tflite_model)
 # For Float16 Quantization (Requires TF 1.15 or above)
 try:
     converter = tf.lite.TFLiteConverter.from_keras_model_file(
-        f'{save_dir}/{model_out}_fin.h5')
+        f"{save_dir}/{model_out}_fin.h5"
+    )
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     converter.target_spec.supported_types = [tf.lite.constants.FLOAT16]
     tflite_model = converter.convert()

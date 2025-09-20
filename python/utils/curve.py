@@ -3,11 +3,11 @@ import cv2
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
-'''
+"""
 A script for applying curve filters on dataset.
 Configure the source and save paths, and
 run the script: python curve.py
-'''
+"""
 
 # Configure the filepaths
 path = "/path/to/dataset/source/"
@@ -24,12 +24,13 @@ def _create_LUT_8UC1(x, y):
 
 # Curve filter class
 class CurveFilter:
-
     def __init__(self):
         self.incr_ch_lut = _create_LUT_8UC1(
-            [0, 64, 128, 192, 256], [0, 70, 140, 210, 256])
+            [0, 64, 128, 192, 256], [0, 70, 140, 210, 256]
+        )
         self.decr_ch_lut = _create_LUT_8UC1(
-            [0, 64, 128, 192, 256], [0, 30,  80, 120, 192])
+            [0, 64, 128, 192, 256], [0, 30, 80, 120, 192]
+        )
 
     def warm(self, img_rgb):
         # Warm filter
@@ -46,7 +47,6 @@ class CurveFilter:
 
     # Cool filter
     def cool(self, img_rgb):
-
         c_r, c_g, c_b = cv2.split(img_rgb)
         c_r = cv2.LUT(c_r, self.decr_ch_lut).astype(np.uint8)
         c_b = cv2.LUT(c_b, self.incr_ch_lut).astype(np.uint8)

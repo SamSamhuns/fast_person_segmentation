@@ -2,11 +2,11 @@ import numpy as np
 import cv2
 import os
 
-'''
+"""
 Images: SxS
 Values: 0-255
 Format: (PNG or JPEG) RGB
-'''
+"""
 
 # Convert source images into '.npy' format
 final_img_dimen = (128, 128)
@@ -24,7 +24,7 @@ def load_image():
         if os.path.isfile(img_path + item):
             im = cv2.cvtColor(cv2.imread(img_path + item), cv2.COLOR_BGR2RGB)
             im = cv2.resize(im, final_img_dimen)
-            im = im.astype('uint8')
+            im = im.astype("uint8")
             x_train.append(im)
 
 
@@ -35,11 +35,11 @@ print("Shape of training original data", imgset.shape)
 np.save("data/voc_img_uint8.npy", imgset)
 
 
-'''
+"""
 Masks: SxS
 Values: 0 (background) and 255 (foreground)
 Format: PNG (RGB or ALPHA)
-'''
+"""
 
 # Convert mask images into '.npy' format
 
@@ -56,10 +56,10 @@ def load_mask():
         if os.path.isfile(msk_path + item):
             im = cv2.cvtColor(cv2.imread(msk_path + item), cv2.COLOR_BGR2RGB)
             im = cv2.resize(im, final_img_dimen)
-            im = im[..., 0].astype('uint8')
+            im = im[..., 0].astype("uint8")
             # removing non-binary values introduced after resizing
             im = np.where(im < 250, 0, 255)
-            im = im.astype('uint8')
+            im = im.astype("uint8")
             y_train.append(im)
 
 

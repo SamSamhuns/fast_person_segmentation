@@ -7,16 +7,30 @@ import os
 
 # Construct argument parser
 ap = argparse.ArgumentParser()
-ap.add_argument("-iimg", "--input_image_path", required=True,
-                help="path to source image directory")
-ap.add_argument("-imsk", "--input_mask_path", required=True,
-                help="path to  source mask directory")
-ap.add_argument("-ibgd", "--input_background_path", required=True,
-                help="path to background image directory")
-ap.add_argument("-oimg", "--output_image_path", required=True,
-                help="path to destination image directory")
-ap.add_argument("-omsk", "--output_mask_path", required=True,
-                help="path to destination mask image directory")
+ap.add_argument(
+    "-iimg", "--input_image_path", required=True, help="path to source image directory"
+)
+ap.add_argument(
+    "-imsk", "--input_mask_path", required=True, help="path to  source mask directory"
+)
+ap.add_argument(
+    "-ibgd",
+    "--input_background_path",
+    required=True,
+    help="path to background image directory",
+)
+ap.add_argument(
+    "-oimg",
+    "--output_image_path",
+    required=True,
+    help="path to destination image directory",
+)
+ap.add_argument(
+    "-omsk",
+    "--output_mask_path",
+    required=True,
+    help="path to destination mask image directory",
+)
 args = vars(ap.parse_args())
 
 img_path = args["input_image_path"]
@@ -45,13 +59,14 @@ x, y = (256, 256)
 def resize():
     for item in dirs_img:
         if os.path.isfile(img_path + item):
-
             # Ensure masks are in png format
-            png_msk = item.rsplit('.', 1)[0] + '.png'
+            png_msk = item.rsplit(".", 1)[0] + ".png"
 
             img = cv2.cvtColor(cv2.imread(img_path + item), cv2.COLOR_BGR2RGB)
             msk = cv2.cvtColor(cv2.imread(msk_path + png_msk), cv2.COLOR_BGR2RGB)
-            bgd = cv2.cvtColor(cv2.imread(bgd_path + random.choice(dirs_bgd)), cv2.COLOR_BGR2RGB)
+            bgd = cv2.cvtColor(
+                cv2.imread(bgd_path + random.choice(dirs_bgd)), cv2.COLOR_BGR2RGB
+            )
 
             # Resize foreground, mask and background
             img = cv2.resize(img, (x, y))

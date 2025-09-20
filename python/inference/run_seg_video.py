@@ -8,7 +8,6 @@ from utils.inference import load_bgd
 
 
 def image_stats(image):
-
     # Compute the mean and standard deviation of each channel
     (l, a, b) = cv2.split(image)
     (lMean, lStd) = (l.mean(), l.std())
@@ -20,7 +19,6 @@ def image_stats(image):
 
 
 def color_transfer(source, target):
-
     # Convert images to UINT8 (0-255)
     source = np.uint8(source * 255.0)
     target = np.uint8(target * 255.0)
@@ -73,7 +71,6 @@ def smoothstep(edge0, edge1, x):
 
 
 def seamlessclone(source, mask, tgt_size):
-
     # Convert images to UINT8 (0-255)
     src = np.uint8(source * 255.0)
     dst = np.uint8(bgd * 255.0)
@@ -91,14 +88,11 @@ def seamlessclone(source, mask, tgt_size):
     clone_size = tgt_size - 2
 
     # Resize images
-    src = cv2.resize(src, (clone_size, clone_size),
-                     interpolation=cv2.INTER_LINEAR)
-    msk = cv2.resize(msk, (clone_size, clone_size),
-                     interpolation=cv2.INTER_LINEAR)
+    src = cv2.resize(src, (clone_size, clone_size), interpolation=cv2.INTER_LINEAR)
+    msk = cv2.resize(msk, (clone_size, clone_size), interpolation=cv2.INTER_LINEAR)
 
     # Find contours of mask ROI
-    contours, hierarchy = cv2.findContours(
-        msk, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(msk, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     largest = max(contours, key=cv2.contourArea)
 
     # Find ROI co-ordinates
@@ -121,24 +115,23 @@ def change_bgd(x, tgt_size):
     # Select background image
     global bgd
     if x == 0:
-        bgd = cv2.resize(cv2.imread('test/desert.jpg'), (tgt_size, tgt_size))
+        bgd = cv2.resize(cv2.imread("test/desert.jpg"), (tgt_size, tgt_size))
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
     elif x == 1:
-        bgd = cv2.resize(cv2.imread('test/ocean.jpeg'), (tgt_size, tgt_size))
+        bgd = cv2.resize(cv2.imread("test/ocean.jpeg"), (tgt_size, tgt_size))
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
     elif x == 2:
-        bgd = cv2.resize(cv2.imread('test/sky.jpg'), (tgt_size, tgt_size))
+        bgd = cv2.resize(cv2.imread("test/sky.jpg"), (tgt_size, tgt_size))
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
     elif x == 3:
-        bgd = cv2.resize(cv2.imread('test/sunset.jpg'), (tgt_size, tgt_size))
+        bgd = cv2.resize(cv2.imread("test/sunset.jpg"), (tgt_size, tgt_size))
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
     else:
-        bgd = cv2.resize(cv2.imread('test/blue.jpg'), (tgt_size, tgt_size))
+        bgd = cv2.resize(cv2.imread("test/blue.jpg"), (tgt_size, tgt_size))
         bgd = cv2.cvtColor(bgd, cv2.COLOR_BGR2RGB) / 255.0
 
 
 def harmonize(net, image, mask, tgt_size):
-
     # Convert image to BGR format
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
@@ -148,12 +141,13 @@ def harmonize(net, image, mask, tgt_size):
 
     # Generate blob inputs from images
     blobimg = cv2.dnn.blobFromImage(
-        image, 1, (512, 512), (104.00699, 116.66877, 122.67892))
+        image, 1, (512, 512), (104.00699, 116.66877, 122.67892)
+    )
     blobmsk = cv2.dnn.blobFromImage(mask, 1, (512, 512))
 
     # Feed the inputs
-    net.setInput(blobimg, 'data')
-    net.setInput(blobmsk, 'mask')
+    net.setInput(blobimg, "data")
+    net.setInput(blobmsk, "mask")
 
     # Predict the output
     pred = net.forward()
@@ -175,13 +169,12 @@ def harmonize(net, image, mask, tgt_size):
 
 def main():
     in_height, in_width = 256, 256
-    model = load_model(
-        'models/prisma_seg/prisma-net-15-0.08.hdf5', compile=False)
+    model = load_model("models/prisma_seg/prisma-net-15-0.08.hdf5", compile=False)
 
     # Load the caffe model for colour harmonization
     try:
-        prototxt = 'models/caffe/deploy_512.prototxt'
-        weights = 'models/caffe/harmonize_iter_200000_fp16.caffemodel'
+        prototxt = "models/caffe/deploy_512.prototxt"
+        weights = "models/caffe/harmonize_iter_200000_fp16.caffemodel"
     except Exception as e:
         print(e)
         print("""Download caffe harmonization model from:
@@ -208,30 +201,30 @@ def main():
     cap = cv2.VideoCapture(0)
 
     # Create a named window
-    cv2.namedWindow('portrait segmentation')
+    cv2.namedWindow("portrait segmentation")
 
     # Create trackbars for background selection
-    cv2.createTrackbar('BGD', 'portrait segmentation', 0, 4,
-                       partial(change_bgd, tgt_size=tgt_size))
+    cv2.createTrackbar(
+        "BGD", "portrait segmentation", 0, 4, partial(change_bgd, tgt_size=tgt_size)
+    )
 
     ret, frame = cap.read()
     while ret:
         t1 = time.time()
         # Get keyboard input
         key = cv2.waitKey(2) & 0xFF
-        if key == ord('c'):
-            filter = 'color_transfer'
-        elif key == ord('s'):
-            filter = 'seamless_clone'
-        elif key == ord('m'):
-            filter = 'smooth_step'
-        elif key == ord('h'):
-            filter = 'colour_harmonize'
+        if key == ord("c"):
+            filter = "color_transfer"
+        elif key == ord("s"):
+            filter = "seamless_clone"
+        elif key == ord("m"):
+            filter = "smooth_step"
+        elif key == ord("h"):
+            filter = "colour_harmonize"
 
         # Pre-process
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        simg = cv2.resize(img, (in_height, in_width),
-                          interpolation=cv2.INTER_AREA)
+        simg = cv2.resize(img, (in_height, in_width), interpolation=cv2.INTER_AREA)
         simg = simg.reshape((1, in_height, in_width, 3)) / 255.0
 
         # Predict
@@ -241,35 +234,42 @@ def main():
         # Post-process
         msk = cv2.GaussianBlur(orimsk, (5, 5), 1)
         img = cv2.resize(img, (tgt_size, tgt_size)) / 255.0
-        msk = cv2.resize(msk, (tgt_size, tgt_size)).reshape(
-            (tgt_size, tgt_size, 1))
+        msk = cv2.resize(msk, (tgt_size, tgt_size)).reshape((tgt_size, tgt_size, 1))
 
-        if filter == 'color_transfer':
+        if filter == "color_transfer":
             img = color_transfer(bgd, img)
-        elif filter == 'smooth_step':
+        elif filter == "smooth_step":
             msk = smoothstep(0.3, 0.5, msk)
-        elif filter == 'seamless_clone':
+        elif filter == "seamless_clone":
             frame = seamlessclone(img, orimsk, tgt_size)
 
         # Alpha blending
-        if filter != 'seamless_clone':
+        if filter != "seamless_clone":
             frame = (img * msk) + (bgd * (1 - msk))
             frame = np.uint8(frame * 255.0)
             mask = np.uint8(msk * 255.0)
 
-        if filter == 'colour_harmonize':
+        if filter == "colour_harmonize":
             frame = harmonize(net, frame, mask, tgt_size)
 
         # Display the resulting frame
         frame = cv2.resize(frame, (1200, 720), interpolation=cv2.INTER_LINEAR)
 
-        cv2.putText(frame, fps, (1200 - 180, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 2, cv2.LINE_AA)
-        cv2.imshow('portrait segmentation', frame[..., ::-1])
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        cv2.putText(
+            frame,
+            fps,
+            (1200 - 180, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.0,
+            (0, 255, 255),
+            2,
+            cv2.LINE_AA,
+        )
+        cv2.imshow("portrait segmentation", frame[..., ::-1])
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
         ret, frame = cap.read()
-        fps = f"FPS: {1/(time.time() - t1):.1f}"
+        fps = f"FPS: {1 / (time.time() - t1):.1f}"
 
     cap.release()
     cv2.destroyAllWindows()

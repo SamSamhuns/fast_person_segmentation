@@ -15,12 +15,14 @@ mp_holistic = mp.solutions.holistic
 mp_objectron = mp.solutions.objectron
 
 
-def inference_video(vid_path: str,
-                    bg_image_path: str,
-                    bg_mode: Optional[BackgroundMode] = None,
-                    disp_wh_size: Tuple[int, int] = (1280, 720),
-                    multi_thread: bool = False,
-                    output_dir: Optional[str] = None):
+def inference_video(
+    vid_path: str,
+    bg_image_path: str,
+    bg_mode: Optional[BackgroundMode] = None,
+    disp_wh_size: Tuple[int, int] = (1280, 720),
+    multi_thread: bool = False,
+    output_dir: Optional[str] = None,
+):
     """
     vid_path: path to video file or use 0 for webcam
     """
@@ -45,11 +47,14 @@ def inference_video(vid_path: str,
     ret, frame = cap.read()
     frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    bg_image = load_bgd(bg_image_path, frame_w, frame_h,
-                        dtype=np.uint8, post_process=None)
+    bg_image = load_bgd(
+        bg_image_path, frame_w, frame_h, dtype=np.uint8, post_process=None
+    )
     fps = ""
     # model_selection=1 uses landscape mode
-    with mp_selfie_segmentation.SelfieSegmentation(model_selection=1) as selfie_segmentation:
+    with mp_selfie_segmentation.SelfieSegmentation(
+        model_selection=1
+    ) as selfie_segmentation:
         while ret:
             itime = time()
             ret, frame = cap.read()
@@ -73,20 +78,20 @@ def inference_video(vid_path: str,
 
             # Mask PostProcessing
             if post_processing == PostProcessingType.MORPH_OPEN:
-                kernel = cv2.getStructuringElement(shape=cv2.MORPH_RECT, ksize=(
-                    default_mopen_ksize, default_mopen_ksize))
+                kernel = cv2.getStructuringElement(
+                    shape=cv2.MORPH_RECT,
+                    ksize=(default_mopen_ksize, default_mopen_ksize),
+                )
                 mask = cv2.morphologyEx(
-                    mask,
-                    cv2.MORPH_OPEN,
-                    kernel=kernel,
-                    iterations=default_mopen_iter)
+                    mask, cv2.MORPH_OPEN, kernel=kernel, iterations=default_mopen_iter
+                )
             elif post_processing == PostProcessingType.GAUSSIAN:
                 mask = cv2.GaussianBlur(
                     mask,
-                    ksize=(default_gauss_ksize,
-                           default_gauss_ksize),
+                    ksize=(default_gauss_ksize, default_gauss_ksize),
                     sigmaX=4,
-                    sigmaY=0)
+                    sigmaY=0,
+                )
 
             condition = np.stack((mask,) * 3, axis=-1) > default_threshold
             # modify bg image if bg_mode set
@@ -98,14 +103,21 @@ def inference_video(vid_path: str,
             output_image = cv2.resize(output_image, (disp_w, disp_h))
 
             # Display the resulting frame & FPS
-            cv2.putText(output_image, fps, (disp_h - 180, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(
+                output_image,
+                fps,
+                (disp_h - 180, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.0,
+                (0, 0, 255),
+                2,
+                cv2.LINE_AA,
+            )
             cv2.imshow(cv2_disp_name, output_image)
             if cv2.waitKey(1) == 113:  # press "q" to stop
                 break
-            vwriter.write_frame(
-                output_image[..., ::-1]) if output_dir else None
-            fps = f"FPS: {1/(time() - itime):.1f}"
+            vwriter.write_frame(output_image[..., ::-1]) if output_dir else None
+            fps = f"FPS: {1 / (time() - itime):.1f}"
         vwriter.close() if output_dir else None
         cap.release()
         cv2.destroyAllWindows()
@@ -115,11 +127,13 @@ def main():
     parser = get_cmd_argparser(default_model=None)
     args = parser.parse_args()
     args.disp_wh_size = tuple(map(int, args.disp_wh_size))
-    inference_video(vid_path=args.source_vid_path,
-                    bg_image_path=args.bg_img_path,
-                    disp_wh_size=args.disp_wh_size,
-                    multi_thread=args.use_multi_thread,
-                    output_dir=args.output_dir)
+    inference_video(
+        vid_path=args.source_vid_path,
+        bg_image_path=args.bg_img_path,
+        disp_wh_size=args.disp_wh_size,
+        multi_thread=args.use_multi_thread,
+        output_dir=args.output_dir,
+    )
 
 
 if __name__ == "__main__":
