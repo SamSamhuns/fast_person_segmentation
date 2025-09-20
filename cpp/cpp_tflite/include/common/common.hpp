@@ -5,13 +5,15 @@
 #include <stdio.h>
 #include <string>
 
-#define CHECK_FOR_ERROR(x)                                                     \
-  if (!(x)) {                                                                  \
-    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__);                   \
-    exit(1);                                                                   \
+#define CHECK_FOR_ERROR(x)                                   \
+  if (!(x))                                                  \
+  {                                                          \
+    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
+    exit(1);                                                 \
   }
 
-struct Settings {
+struct Settings
+{
   // init return char ptr vars to nullptr for initialization check later
   char *mode = nullptr;
   char *model_path = nullptr;
@@ -31,7 +33,8 @@ struct Settings {
   int number_of_threads = 4;
 };
 
-struct IOShape {
+struct IOShape
+{
   int index;
   int bsize;
   int height;

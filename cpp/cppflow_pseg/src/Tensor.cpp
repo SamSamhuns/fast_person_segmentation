@@ -6,14 +6,15 @@
 
 #include <utility>
 
-Tensor::Tensor(const Model& model, const std::string& operation) {
+Tensor::Tensor(const Model &model, const std::string &operation)
+{
 
     // Get operation by the name
     this->op.oper = TF_GraphOperationByName(model.graph, operation.c_str());
     this->op.index = 0;
 
     // Operation did not exists
-    error_check(this->op.oper != nullptr, "No operation named \"" + operation + "\" exists" );
+    error_check(this->op.oper != nullptr, "No operation named \"" + operation + "\" exists");
 
     // DIMENSIONS
 
@@ -24,7 +25,8 @@ Tensor::Tensor(const Model& model, const std::string& operation) {
     this->type = TF_OperationOutputType(this->op);
 
     // If is not a scalar
-    if (n_dims > 0) {
+    if (n_dims > 0)
+    {
         // Get dimensions
         auto *dims = new int64_t[n_dims];
         TF_GraphGetTensorShape(model.graph, this->op, dims, n_dims, model.status);
@@ -45,32 +47,37 @@ Tensor::Tensor(const Model& model, const std::string& operation) {
     this->data = nullptr;
 }
 
-Tensor::~Tensor() {
+Tensor::~Tensor()
+{
     this->clean();
 }
 
-
-
-void Tensor::clean() {
-    if (this->flag == 1) {
+void Tensor::clean()
+{
+    if (this->flag == 1)
+    {
         TF_DeleteTensor(this->val);
         this->flag = 0;
     }
     this->data = nullptr;
 }
 
-void  Tensor::error_check(bool condition, const std::string &error) {
-    if (!condition) {
+void Tensor::error_check(bool condition, const std::string &error)
+{
+    if (!condition)
+    {
         this->flag = -1;
         throw std::runtime_error(error);
     }
 }
 
-template<typename T>
-void Tensor::set_data(std::vector<T> new_data) {
+template <typename T>
+void Tensor::set_data(std::vector<T> new_data)
+{
 
-    //Non empty tensor
-    if (this->flag == 1) {
+    // Non empty tensor
+    if (this->flag == 1)
+    {
         TF_DeleteTensor(this->val);
         this->flag = 0;
     }
@@ -93,12 +100,13 @@ void Tensor::set_data(std::vector<T> new_data) {
     this->error_check(new_data.size() % exp_size == 0, "Expected and provided number of elements do not match");
 
     // Deallocator
-    auto d = [](void* ddata, size_t, void*) {free(static_cast<T*>(ddata));};
-
+    auto d = [](void *ddata, size_t, void *)
+    { free(static_cast<T *>(ddata)); };
 
     // Calculate actual shape of unknown dimensions
     this->actual_shape = std::make_unique<decltype(actual_shape)::element_type>(shape.begin(), shape.end());
-    std::replace_if (actual_shape->begin(), actual_shape->end(), [](int64_t r) {return r==-1;}, new_data.size()/exp_size);
+    std::replace_if(actual_shape->begin(), actual_shape->end(), [](int64_t r)
+                    { return r == -1; }, new_data.size() / exp_size);
 
     // Saves data on class
     this->data = malloc(sizeof(T) * new_data.size());
@@ -106,13 +114,14 @@ void Tensor::set_data(std::vector<T> new_data) {
 
     this->val = TF_NewTensor(this->type, actual_shape->data(), actual_shape->size(), this->data, sizeof(T) * new_data.size(), d, nullptr);
 
-
     this->error_check(this->val != nullptr, "An error occurred allocating the Tensor memory");
 
     this->flag = 1;
 }
 
-template<typename T> void Tensor::set_data(std::vector<T> new_data, const std::vector<int64_t>& new_shape) {
+template <typename T>
+void Tensor::set_data(std::vector<T> new_data, const std::vector<int64_t> &new_shape)
+{
 
     this->error_check(this->shape.empty() || this->shape.size() == new_shape.size(), "Provided shape has different number of dimensions");
     auto old_shape = this->shape;
@@ -123,8 +132,9 @@ template<typename T> void Tensor::set_data(std::vector<T> new_data, const std::v
     this->shape = old_shape;
 }
 
-template<typename T>
-std::vector<T> Tensor::get_data() {
+template <typename T>
+std::vector<T> Tensor::get_data()
+{
 
     // Check Tensor is valid
     this->error_check(this->flag != -1, "Tensor is not valid");
@@ -135,7 +145,6 @@ std::vector<T> Tensor::get_data() {
     // Tensor is not empty
     this->error_check(this->flag != 0, "Tensor is empty");
 
-
     // Check tensor data is not empty
     auto raw_data = TF_TensorData(this->val);
     this->error_check(raw_data != nullptr, "Tensor data is empty");
@@ -143,21 +152,23 @@ std::vector<T> Tensor::get_data() {
     size_t size = TF_TensorByteSize(this->val) / TF_DataTypeSize(TF_TensorType(this->val));
 
     // Convert to correct type
-    const auto T_data = static_cast<T*>(raw_data);
+    const auto T_data = static_cast<T *>(raw_data);
     return std::vector<T>(T_data, T_data + size);
 }
 
-std::vector<int64_t> Tensor::get_shape() {
-	return shape;
+std::vector<int64_t> Tensor::get_shape()
+{
+    return shape;
 }
 
-template<typename T>
-TF_DataType Tensor::deduce_type() {
+template <typename T>
+TF_DataType Tensor::deduce_type()
+{
     if (std::is_same<T, float>::value)
         return TF_FLOAT;
     if (std::is_same<T, double>::value)
         return TF_DOUBLE;
-    if (std::is_same<T, int32_t >::value)
+    if (std::is_same<T, int32_t>::value)
         return TF_INT32;
     if (std::is_same<T, uint8_t>::value)
         return TF_UINT8;
@@ -167,8 +178,8 @@ TF_DataType Tensor::deduce_type() {
         return TF_INT8;
     if (std::is_same<T, int64_t>::value)
         return TF_INT64;
-//    if constexpr (std::is_same<T, bool>::value)
-//        return TF_BOOL;
+    //    if constexpr (std::is_same<T, bool>::value)
+    //        return TF_BOOL;
     if (std::is_same<T, uint16_t>::value)
         return TF_UINT16;
     if (std::is_same<T, uint32_t>::value)
@@ -179,25 +190,27 @@ TF_DataType Tensor::deduce_type() {
     throw std::runtime_error{"Could not deduce type!"};
 }
 
-void Tensor::deduce_shape() {
+void Tensor::deduce_shape()
+{
     // Get number of dimensions
     int n_dims = TF_NumDims(this->val);
 
     // If is not a scalar
-    if (n_dims > 0) {
+    if (n_dims > 0)
+    {
         // Get dimensions
         this->shape = std::vector<int64_t>(n_dims, -1);
-        for (int i=0; i<n_dims; i++) {
+        for (int i = 0; i < n_dims; i++)
+        {
             this->shape[i] = TF_Dim(this->val, i);
         }
     }
 }
 
-
 // VALID deduce_type TEMPLATES
 template TF_DataType Tensor::deduce_type<float>();
 template TF_DataType Tensor::deduce_type<double>();
-//template TF_DataType Tensor::deduce_type<bool>();
+// template TF_DataType Tensor::deduce_type<bool>();
 template TF_DataType Tensor::deduce_type<int8_t>();
 template TF_DataType Tensor::deduce_type<int16_t>();
 template TF_DataType Tensor::deduce_type<int32_t>();
@@ -223,7 +236,7 @@ template std::vector<uint64_t> Tensor::get_data<uint64_t>();
 // VALID set_data TEMPLATES
 template void Tensor::set_data<float>(std::vector<float> new_data);
 template void Tensor::set_data<double>(std::vector<double> new_data);
-//template void Tensor::set_data<bool>(std::vector<bool> new_data);
+// template void Tensor::set_data<bool>(std::vector<bool> new_data);
 template void Tensor::set_data<int8_t>(std::vector<int8_t> new_data);
 template void Tensor::set_data<int16_t>(std::vector<int16_t> new_data);
 template void Tensor::set_data<int32_t>(std::vector<int32_t> new_data);
@@ -234,14 +247,14 @@ template void Tensor::set_data<uint32_t>(std::vector<uint32_t> new_data);
 template void Tensor::set_data<uint64_t>(std::vector<uint64_t> new_data);
 
 // VALID set_data TEMPLATES
-template void Tensor::set_data<float>(std::vector<float> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<double>(std::vector<double> new_data, const std::vector<int64_t>& new_shape);
-//template void Tensor::set_data<bool>(std::vector<bool> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<int8_t>(std::vector<int8_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<int16_t>(std::vector<int16_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<int32_t>(std::vector<int32_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<int64_t>(std::vector<int64_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<uint8_t>(std::vector<uint8_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<uint16_t>(std::vector<uint16_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<uint32_t>(std::vector<uint32_t> new_data, const std::vector<int64_t>& new_shape);
-template void Tensor::set_data<uint64_t>(std::vector<uint64_t> new_data, const std::vector<int64_t>& new_shape);
+template void Tensor::set_data<float>(std::vector<float> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<double>(std::vector<double> new_data, const std::vector<int64_t> &new_shape);
+// template void Tensor::set_data<bool>(std::vector<bool> new_data, const std::vector<int64_t>& new_shape);
+template void Tensor::set_data<int8_t>(std::vector<int8_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<int16_t>(std::vector<int16_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<int32_t>(std::vector<int32_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<int64_t>(std::vector<int64_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<uint8_t>(std::vector<uint8_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<uint16_t>(std::vector<uint16_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<uint32_t>(std::vector<uint32_t> new_data, const std::vector<int64_t> &new_shape);
+template void Tensor::set_data<uint64_t>(std::vector<uint64_t> new_data, const std::vector<int64_t> &new_shape);

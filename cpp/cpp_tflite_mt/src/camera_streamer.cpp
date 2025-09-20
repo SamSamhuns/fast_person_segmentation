@@ -1,6 +1,7 @@
 #include "camera_streamer.hpp"
 
-CameraStreamer::CameraStreamer(std::vector<std::string> stream_source, int qsize) {
+CameraStreamer::CameraStreamer(std::vector<std::string> stream_source, int qsize)
+{
   camera_source = stream_source;
   camera_count = camera_source.size();
   isUSBCamera = false;
@@ -9,7 +10,8 @@ CameraStreamer::CameraStreamer(std::vector<std::string> stream_source, int qsize
   startMultiCapture();
 }
 
-CameraStreamer::CameraStreamer(std::vector<int> capture_index, int qsize) {
+CameraStreamer::CameraStreamer(std::vector<int> capture_index, int qsize)
+{
   camera_index = capture_index;
   camera_count = capture_index.size();
   isUSBCamera = true;
@@ -20,9 +22,11 @@ CameraStreamer::CameraStreamer(std::vector<int> capture_index, int qsize) {
 
 CameraStreamer::~CameraStreamer() { stopMultiCapture(); }
 
-void CameraStreamer::captureFrame(int index) {
+void CameraStreamer::captureFrame(int index)
+{
   cv::VideoCapture *capture = camera_capture[index];
-  while (true) {
+  while (true)
+  {
     cv::Mat frame;
     // Grab frame from camera capture
     (*capture) >> frame;
@@ -35,17 +39,22 @@ void CameraStreamer::captureFrame(int index) {
   }
 }
 
-void CameraStreamer::startMultiCapture() {
+void CameraStreamer::startMultiCapture()
+{
   cv::VideoCapture *capture;
   std::thread *t;
   tbb::concurrent_bounded_queue<cv::Mat> *q;
-  for (int i = 0; i < camera_count; i++) {
+  for (int i = 0; i < camera_count; i++)
+  {
     // Make VideoCapture instance
-    if (!isUSBCamera) {
+    if (!isUSBCamera)
+    {
       std::string url = camera_source[i];
       capture = new cv::VideoCapture(url);
       std::cout << "Camera Setup: " << url << std::endl;
-    } else {
+    }
+    else
+    {
       int idx = camera_index[i];
       capture = new cv::VideoCapture(idx);
       std::cout << "Camera Setup: " << std::to_string(idx) << std::endl;
@@ -71,11 +80,14 @@ void CameraStreamer::startMultiCapture() {
   }
 }
 
-void CameraStreamer::stopMultiCapture() {
+void CameraStreamer::stopMultiCapture()
+{
   cv::VideoCapture *cap;
-  for (int i = 0; i < camera_count; i++) {
+  for (int i = 0; i < camera_count; i++)
+  {
     cap = camera_capture[i];
-    if (cap->isOpened()) {
+    if (cap->isOpened())
+    {
       // Relase VideoCapture resource
       cap->release();
     }

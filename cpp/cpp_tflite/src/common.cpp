@@ -15,7 +15,8 @@
 #include "tensorflow/lite/optional_debug_tools.h"
 #include "tensorflow/lite/tools/gen_op_registration.h"
 
-void print_help() {
+void print_help()
+{
   std::cout
       << "--mode/-m <img/vid>:           Use -m img/vid for image/video mode\n"
          "--tflite_model_path/-t <path>: Path to tflite model\n"
@@ -31,13 +32,15 @@ void print_help() {
          "--help/-h:                     Show help\n";
 }
 
-bool does_file_exist(const char *fpath) {
+bool does_file_exist(const char *fpath)
+{
   // if check if a file exists in fpath
   struct stat buffer;
   return (stat(fpath, &buffer) == 0);
 }
 
-Settings get_settings_from_args(int argc, char **argv) {
+Settings get_settings_from_args(int argc, char **argv)
+{
   Settings s;
 
   const char *const short_opts = "m:t:i:b:s:pvh";
@@ -52,12 +55,14 @@ Settings get_settings_from_args(int argc, char **argv) {
       {"help", no_argument, nullptr, 'h'},
       {nullptr, no_argument, nullptr, 0}};
 
-  while (true) {
+  while (true)
+  {
     const auto opt = getopt_long(argc, argv, short_opts, long_opts, nullptr);
     if (-1 == opt)
       break;
 
-    switch (opt) {
+    switch (opt)
+    {
     case 'm':
       s.mode = optarg;
       std::cout << "Inference mode: " << s.mode << "\n";
@@ -97,41 +102,53 @@ Settings get_settings_from_args(int argc, char **argv) {
 
   // mode and tflite_model_path must not be nullptr
   // note for this check to happen, vars must be initialized to nullptr
-  if ((s.mode == nullptr) || (s.mode[0] == '\0')) {
+  if ((s.mode == nullptr) || (s.mode[0] == '\0'))
+  {
     std::cout << "ERROR: -m img/vid must be specified. Use -h for help" << '\n';
     exit(1);
-  } else if ((s.model_path == nullptr) || (s.model_path[0] == '\0')) {
+  }
+  else if ((s.model_path == nullptr) || (s.model_path[0] == '\0'))
+  {
     std::cout << "ERROR: tflite model path is needed. Use -h for help \n";
     exit(1);
   }
 
   // if the paths are not NULL and are valid
-  if (!does_file_exist(s.model_path)) {
+  if (!does_file_exist(s.model_path))
+  {
     std::cout << "ERROR: Invalid tflite model path: " << s.model_path << '\n';
     exit(1);
-  } else if (s.in_media_path != nullptr && !does_file_exist(s.in_media_path)) {
+  }
+  else if (s.in_media_path != nullptr && !does_file_exist(s.in_media_path))
+  {
     std::cout << "ERROR: Invalid in media path: " << s.in_media_path << '\n';
     exit(1);
-  } else if (s.bg_path != nullptr && !does_file_exist(s.bg_path)) {
+  }
+  else if (s.bg_path != nullptr && !does_file_exist(s.bg_path))
+  {
     std::cout << "ERROR: Invalid bg image path: " << s.bg_path << '\n';
     exit(1);
   }
   return s;
 }
 
-std::string get_basename(std::string full_path) {
+std::string get_basename(std::string full_path)
+{
   // get model name from full model path
   std::istringstream stream(full_path);
   std::string str;
-  while (std::getline(stream, str, '/')) {
+  while (std::getline(stream, str, '/'))
+  {
   }
   return str;
 }
 
-void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter) {
+void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter)
+{
   std::cout << "INFO: Printing model layer name and shapes:" << std::endl;
   int t_size = interpreter->tensors_size();
-  for (int i = 0; i < t_size; i++) {
+  for (int i = 0; i < t_size; i++)
+  {
     if (interpreter->tensor(i)->name)
       std::cout << i << ": " << interpreter->tensor(i)->name << ", "
                 << interpreter->tensor(i)->bytes << ", "
@@ -143,7 +160,8 @@ void print_model_struct(std::unique_ptr<tflite::Interpreter> &interpreter) {
 
 std::tuple<IOShape, IOShape>
 get_input_output_dims(Settings &settings,
-                      std::unique_ptr<tflite::Interpreter> &interpreter) {
+                      std::unique_ptr<tflite::Interpreter> &interpreter)
+{
   // get input/output dimension from the input/output tensor metadata
   int input_index = 0;
   int output_index = 0;
@@ -163,7 +181,8 @@ get_input_output_dims(Settings &settings,
   const std::vector<int> inputs = interpreter->inputs();
   const std::vector<int> outputs = interpreter->outputs();
 
-  if (settings.verbose) {
+  if (settings.verbose)
+  {
     printf("INFO: Printing Model input/output names and shapes\n");
     printf("\tInput shape: [%d,%d,%d,%d]\n", in_bsize, in_height, in_width,
            in_channels);

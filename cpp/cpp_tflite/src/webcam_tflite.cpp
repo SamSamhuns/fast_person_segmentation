@@ -22,24 +22,30 @@
 int img_mode(Settings &settings);
 int vid_mode(Settings &settings);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   // parse args and fill vars
   Settings settings = get_settings_from_args(argc, argv);
 
-  if (strcmp(settings.mode, "img") == 0) {
+  if (strcmp(settings.mode, "img") == 0)
+  {
     if ((settings.in_media_path == nullptr) ||
-        (settings.in_media_path[0] == '\0')) {
+        (settings.in_media_path[0] == '\0'))
+    {
       std::cout << "ERROR: Input image path is needed. Use -h for help\n";
       exit(1);
     }
     img_mode(settings);
-  } else if (strcmp(settings.mode, "vid") == 0) {
+  }
+  else if (strcmp(settings.mode, "vid") == 0)
+  {
     vid_mode(settings);
   }
   return 0;
 }
 
-int img_mode(Settings &settings) {
+int img_mode(Settings &settings)
+{
   const char *model_filepath = settings.model_path;
   char *in_media_path = settings.in_media_path;
   char *bg_path = settings.bg_path;
@@ -61,7 +67,8 @@ int img_mode(Settings &settings) {
   CHECK_FOR_ERROR(interpreter != nullptr);
 
   interpreter->SetAllowFp16PrecisionForFp32(settings.allow_fp16);
-  if (settings.number_of_threads != -1) {
+  if (settings.number_of_threads != -1)
+  {
     interpreter->SetNumThreads(settings.number_of_threads);
   }
   if (settings.verbose)
@@ -92,9 +99,12 @@ int img_mode(Settings &settings) {
   // load bg image for replacement
   cv::Mat bg, bg_mask;
   if ((bg_path == nullptr) ||
-      (bg_path[0] == '\0')) { // if no bg img path provided, use a zero image
+      (bg_path[0] == '\0'))
+  { // if no bg img path provided, use a zero image
     bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
-  } else {
+  }
+  else
+  {
     bg = cv::imread(bg_path); // if bg img path provided, load as BGR
     cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
     bg.convertTo(bg, CV_32FC3);
@@ -152,14 +162,16 @@ int img_mode(Settings &settings) {
 
   cv::imshow(disp_window_name, convMat);
   // save output save_path if provided
-  if ((save_path != nullptr) && (save_path[0] != '\0')) {
+  if ((save_path != nullptr) && (save_path[0] != '\0'))
+  {
     cv::imwrite(save_path, convMat);
   }
   cv::waitKey(0);
   return 0;
 }
 
-int vid_mode(Settings &settings) {
+int vid_mode(Settings &settings)
+{
   const char *model_filepath = settings.model_path;
   char *in_media_path = settings.in_media_path;
   char *bg_path = settings.bg_path;
@@ -181,7 +193,8 @@ int vid_mode(Settings &settings) {
   CHECK_FOR_ERROR(interpreter != nullptr);
 
   interpreter->SetAllowFp16PrecisionForFp32(settings.allow_fp16);
-  if (settings.number_of_threads != -1) {
+  if (settings.number_of_threads != -1)
+  {
     interpreter->SetNumThreads(settings.number_of_threads);
   }
   if (settings.verbose)
@@ -198,9 +211,12 @@ int vid_mode(Settings &settings) {
 
   // Capture frames from video
   cv::VideoCapture cap;
-  if ((in_media_path == nullptr) || (in_media_path[0] == '\0')) { // webcam mode
+  if ((in_media_path == nullptr) || (in_media_path[0] == '\0'))
+  { // webcam mode
     cap.open(0);
-  } else {
+  }
+  else
+  {
     cap.open(in_media_path); // video loaded from path
   }
 
@@ -223,7 +239,8 @@ int vid_mode(Settings &settings) {
 
   // set up opencv video writer if save_path is provided
   cv::VideoWriter video;
-  if ((save_path != nullptr) && (save_path[0] != '\0')) {
+  if ((save_path != nullptr) && (save_path[0] != '\0'))
+  {
     int fps = 25;
     video.open(save_path, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), fps,
                cv::Size(disp_w, disp_h));
@@ -232,9 +249,12 @@ int vid_mode(Settings &settings) {
   // load bg image for replacement
   cv::Mat bg, bg_mask;
   if ((bg_path == nullptr) ||
-      (bg_path[0] == '\0')) { // if no bg img path provided, use a zero image
+      (bg_path[0] == '\0'))
+  { // if no bg img path provided, use a zero image
     bg = cv::Mat::zeros(cv::Size(disp_w, disp_h), CV_32FC3);
-  } else {
+  }
+  else
+  {
     bg = cv::imread(bg_path); // if bg img path provided, load as BGR
     cv::resize(bg, bg, cv::Size(disp_w, disp_h), cv::INTER_LINEAR);
     bg.convertTo(bg, CV_32FC3);
@@ -252,7 +272,8 @@ int vid_mode(Settings &settings) {
               << '\n';
 
   // Process video frames till video ends or 'q' is pressed
-  while (cv::waitKey(1) != 113) {
+  while (cv::waitKey(1) != 113)
+  {
     auto start = std::chrono::steady_clock::now();
     // Read frames from camera
     cap >> frame;
@@ -278,13 +299,18 @@ int vid_mode(Settings &settings) {
     cv::Mat two_channel(out_shape.height, out_shape.width, CV_32FC2,
                         output_data_ptr);
 
-    if (!use_prev_msk) {
+    if (!use_prev_msk)
+    {
       // Use the raw bg mask output, faster but less stable over frames
       cv::extractChannel(two_channel, mask, 0);
-    } else {
+    }
+    else
+    {
       // Run softmax over tensor output and blend with previous mask.
-      for (int i = 0; i < out_shape.height; ++i) {
-        for (int j = 0; j < out_shape.width; ++j) {
+      for (int i = 0; i < out_shape.height; ++i)
+      {
+        for (int j = 0; j < out_shape.width; ++j)
+        {
           // Only two channel input tensor is supported.
           const cv::Vec2f input_pix = two_channel.at<cv::Vec2f>(i, j);
           const float shift = std::max(input_pix[0], input_pix[1]);
@@ -294,7 +320,8 @@ int vid_mode(Settings &settings) {
               std::exp(input_pix[out_channel_index] - shift) / softmax_denom;
 
           // Combine prev value with cur using uncertainty^2 as mixing coeff
-          if (use_prev_msk && !prev_convMat.empty()) {
+          if (use_prev_msk && !prev_convMat.empty())
+          {
             const float prev_mask_value = prev_convMat.at<float>(i, j);
             float uncertainty_alpha =
                 1.0 + (new_mask_value * std::log(new_mask_value + eps) +

@@ -6,7 +6,8 @@
 #include <thread>
 #include <vector>
 
-class CameraStreamer {
+class CameraStreamer
+{
 public:
   // this holds camera stream urls
   std::vector<std::string> camera_source;
@@ -29,7 +30,7 @@ public:
 private:
   bool isUSBCamera;
   int camera_count;
-  int max_queue_size;  // set to small value like <= 2
+  int max_queue_size; // set to small value like <= 2
   // initialize and start the camera capturing process(es)
   void startMultiCapture();
   // release all camera capture resource(s)
