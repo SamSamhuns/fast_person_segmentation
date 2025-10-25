@@ -36,7 +36,7 @@ Pretrained `graphe-def`, `hdf5`, `onnx`, `pth`, and `tflite` models can be downl
 
 ```shell
 pip install gdown
-gdown 1AKgyCZX04Tm9ecXIaOBvi-8yTGcMmMkz
+gdown 1OAWQeI6XmOu_g2aTygCHet6DEVjy0bqy
 unzip models.zip
 rm models.zip
 ```
